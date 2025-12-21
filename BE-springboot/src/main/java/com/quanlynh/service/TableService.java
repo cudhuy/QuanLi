@@ -36,8 +36,7 @@ public class TableService {
     }
 
     private void apply(DiningTable table, TableRequest request) {
-        table.setName(request.getName());
-        table.setSeats(request.getSeats());
-        table.setStatus(request.getStatus() == null ? "available" : request.getStatus());
+        table.setTableNumber(request.getTableNumber());
+        table.setQrCode(request.getQrCode());
     }
 }

@@ -3,8 +3,10 @@ package com.quanlynh.service;
 import com.quanlynh.dto.RatingRequest;
 import com.quanlynh.entity.Order;
 import com.quanlynh.entity.Rating;
+import com.quanlynh.entity.MenuItem;
 import com.quanlynh.repository.OrderRepository;
 import com.quanlynh.repository.RatingRepository;
+import com.quanlynh.repository.MenuItemRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,16 +15,20 @@ import java.time.LocalDateTime;
 public class RatingService {
     private final RatingRepository ratingRepository;
     private final OrderRepository orderRepository;
+    private final MenuItemRepository menuItemRepository;
 
-    public RatingService(RatingRepository ratingRepository, OrderRepository orderRepository) {
+    public RatingService(RatingRepository ratingRepository, OrderRepository orderRepository, MenuItemRepository menuItemRepository) {
         this.ratingRepository = ratingRepository;
         this.orderRepository = orderRepository;
+        this.menuItemRepository = menuItemRepository;
     }
 
     public Rating create(RatingRequest request) {
         Order order = orderRepository.findById(request.getOrderId()).orElseThrow();
+        MenuItem menu = menuItemRepository.findById(request.getMenuId()).orElseThrow();
         Rating rating = new Rating();
         rating.setOrder(order);
+        rating.setMenu(menu);
         rating.setRating(request.getRating());
         rating.setComment(request.getComment());
         rating.setCreatedAt(LocalDateTime.now());

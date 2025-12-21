@@ -7,10 +7,7 @@ import lombok.Data;
 @Data
 public class TableRequest {
     @NotBlank
-    private String name;
+    private String tableNumber;
 
-    @Min(1)
-    private int seats;
-
-    private String status;
+    private String qrCode;
 }

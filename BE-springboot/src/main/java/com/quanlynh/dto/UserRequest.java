@@ -8,13 +8,14 @@ import java.util.Set;
 @Data
 public class UserRequest {
     @NotBlank
-    private String username;
+    private String name;
 
-    private String fullName;
+    @NotBlank
     private String email;
     private String phone;
 
     private String password;
 
-    private Set<String> roles;
+    @NotBlank
+    private String role; // admin or staff
 }

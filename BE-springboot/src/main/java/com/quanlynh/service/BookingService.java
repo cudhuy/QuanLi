@@ -11,20 +11,17 @@ import java.util.List;
 @Service
 public class BookingService {
     private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository, UserRepository userRepository) {
+    public BookingService(BookingRepository bookingRepository) {
         this.bookingRepository = bookingRepository;
-        this.userRepository = userRepository;
     }
 
     public Booking create(BookingRequest request) {
         Booking booking = new Booking();
-        if (request.getUserId() != null) {
-            userRepository.findById(request.getUserId()).ifPresent(booking::setUser);
-        }
         booking.setCustomerName(request.getCustomerName());
+        booking.setEmail(request.getEmail());
         booking.setPhone(request.getPhone());
+        booking.setBookingDate(request.getBookingDate());
         booking.setBookingTime(request.getBookingTime());
         booking.setGuests(request.getGuests());
         booking.setNote(request.getNote());

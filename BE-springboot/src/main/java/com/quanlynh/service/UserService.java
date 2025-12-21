@@ -1,26 +1,20 @@
 package com.quanlynh.service;
 
 import com.quanlynh.dto.UserRequest;
-import com.quanlynh.entity.Role;
 import com.quanlynh.entity.User;
-import com.quanlynh.repository.RoleRepository;
 import com.quanlynh.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -45,19 +39,12 @@ public class UserService {
     }
 
     private void applyRequest(User user, UserRequest request, boolean updatePassword) {
-        user.setUsername(request.getUsername());
-        user.setFullName(request.getFullName());
+        user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
+        user.setRole(request.getRole().toLowerCase());
         if (updatePassword) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        }
-        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-            Set<Role> roles = new HashSet<>();
-            for (String roleName : request.getRoles()) {
-                roleRepository.findByName(roleName.toUpperCase()).ifPresent(roles::add);
-            }
-            user.setRoles(roles);
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
     }
 }

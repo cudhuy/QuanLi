@@ -10,6 +10,9 @@ public class RatingRequest {
     @NotNull
     private Long orderId;
 
+    @NotNull
+    private Long menuId;
+
     @Min(1)
     @Max(5)
     private int rating;
