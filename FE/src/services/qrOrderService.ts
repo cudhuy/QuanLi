@@ -3,12 +3,12 @@ import { api } from '../Api/AxiosIntance';
 
 // Tạo instance axios riêng cho các route web (không phải api)
 const webApi = axios.create({
-  baseURL: 'http://192.168.10.112:8000',
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+	baseURL: 'http://localhost:8000',
+	withCredentials: true,
+	headers: {
+		'Content-Type': 'application/json',
+		Accept: 'application/json',
+	},
 });
 
 export interface MenuItem {
