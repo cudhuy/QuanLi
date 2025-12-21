@@ -15,4 +15,9 @@ public class Category {
 
     @Column(nullable = false)
     private String name;
+
+    private String description;
+
+    @Column(nullable = false)
+    private Boolean active = true;
 }

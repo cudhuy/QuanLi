@@ -35,8 +35,13 @@ public class TableService {
         return diningTableRepository.save(table);
     }
 
+    public void delete(Long id) {
+        diningTableRepository.deleteById(id);
+    }
+
     private void apply(DiningTable table, TableRequest request) {
         table.setTableNumber(request.getTableNumber());
         table.setQrCode(request.getQrCode());
+        table.setStatus(request.getStatus() != null ? request.getStatus() : "available");
     }
 }

@@ -74,6 +74,12 @@ public class AdminController {
         return ResponseEntity.ok(new ApiResponse<>(tableService.get(id), "ok"));
     }
 
+    @DeleteMapping("/table/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteTable(@PathVariable Long id) {
+        tableService.delete(id);
+        return ResponseEntity.ok(new ApiResponse<>("deleted", "deleted"));
+    }
+
     @PostMapping("/add-cate")
     public ResponseEntity<ApiResponse<Category>> addCategory(@Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(categoryService.create(request), "created"));

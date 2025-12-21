@@ -43,6 +43,7 @@ public class OrderService {
             item.setOrder(order);
             item.setMenu(menuItem);
             item.setQuantity(itemRequest.getQuantity());
+            item.setPrice(menuItem.getPrice());
             order.getItems().add(item);
             total = total.add(menuItem.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
         }

@@ -39,6 +39,7 @@ public class PaymentService {
         paymentRepository.save(payment);
         Map<String, Object> response = new HashMap<>();
         response.put("payment_url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html");
+        response.put("url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html");
         response.put("status", payment.getStatus());
         response.put("data", payment);
         return response;

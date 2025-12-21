@@ -2,6 +2,7 @@ package com.quanlynh.controller;
 
 import com.quanlynh.dto.*;
 import com.quanlynh.entity.*;
+import com.quanlynh.repository.OrderRepository;
 import com.quanlynh.service.*;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,11 @@ public class PublicController {
     @GetMapping("/table")
     public ResponseEntity<ApiResponse<List<DiningTable>>> listTables() {
         return ResponseEntity.ok(new ApiResponse<>(tableService.list(), "ok"));
+    }
+
+    @GetMapping("/table/{id}")
+    public ResponseEntity<ApiResponse<DiningTable>> getTable(@PathVariable Long id) {
+        return ResponseEntity.ok(new ApiResponse<>(tableService.get(id), "ok"));
     }
 
     @GetMapping("/list-menu")

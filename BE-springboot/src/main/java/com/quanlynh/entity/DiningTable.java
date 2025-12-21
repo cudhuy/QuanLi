@@ -18,4 +18,7 @@ public class DiningTable {
 
     @Column(name = "qr_code")
     private String qrCode;
+
+    @Column(name = "status")
+    private String status;
 }

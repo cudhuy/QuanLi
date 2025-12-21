@@ -24,4 +24,7 @@ public class OrderItem {
     private MenuItem menu;
 
     private int quantity;
+
+    @Column(precision = 10, scale = 2)
+    private java.math.BigDecimal price;
 }

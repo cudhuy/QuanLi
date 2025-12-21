@@ -10,4 +10,6 @@ public class TableRequest {
     private String tableNumber;
 
     private String qrCode;
+
+    private String status;
 }
