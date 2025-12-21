@@ -4,9 +4,16 @@ import com.quanlynh.dto.*;
 import com.quanlynh.entity.*;
 import com.quanlynh.service.*;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +26,7 @@ public class PublicController {
     private final BookingService bookingService;
     private final RatingService ratingService;
     private final PaymentService paymentService;
+    private final OrderRepository orderRepository;
 
     public PublicController(CategoryService categoryService,
                             TableService tableService,
@@ -26,7 +34,8 @@ public class PublicController {
                             OrderService orderService,
                             BookingService bookingService,
                             RatingService ratingService,
-                            PaymentService paymentService) {
+                            PaymentService paymentService,
+                            OrderRepository orderRepository) {
         this.categoryService = categoryService;
         this.tableService = tableService;
         this.menuService = menuService;
@@ -34,6 +43,7 @@ public class PublicController {
         this.bookingService = bookingService;
         this.ratingService = ratingService;
         this.paymentService = paymentService;
+        this.orderRepository = orderRepository;
     }
 
     @GetMapping("/cate")
@@ -51,6 +61,11 @@ public class PublicController {
         return ResponseEntity.ok(new ApiResponse<>(menuService.list(), "ok"));
     }
 
+    @GetMapping("/order")
+    public ResponseEntity<ApiResponse<List<Order>>> listOrders() {
+        return ResponseEntity.ok(new ApiResponse<>(orderRepository.findAll(), "ok"));
+    }
+
     @GetMapping("/popular-dishes")
     public ResponseEntity<ApiResponse<List<MenuItem>>> popularDishes() {
         return ResponseEntity.ok(new ApiResponse<>(menuService.listPopular(), "ok"));
@@ -62,8 +77,8 @@ public class PublicController {
     }
 
     @GetMapping("/order-item/{id}")
-    public ResponseEntity<ApiResponse<List<OrderItem>>> orderItems(@PathVariable Long id) {
-        return ResponseEntity.ok(new ApiResponse<>(orderService.listItems(id), "ok"));
+    public ResponseEntity<Order> orderDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getById(id));
     }
 
     @PostMapping("/booking")
@@ -105,5 +120,20 @@ public class PublicController {
     @PostMapping("/internal_payment")
     public ResponseEntity<ApiResponse<Map<String, Object>>> internalPayment(@RequestBody Map<String, Object> payload) {
         return ResponseEntity.ok(new ApiResponse<>(paymentService.createInternalPayment(payload), "created"));
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse<Map<String, String>>> upload(@RequestParam("file") MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(new ApiResponse<>(null, "file_empty"));
+        }
+        Path uploadDir = Paths.get("uploads");
+        Files.createDirectories(uploadDir);
+        String filename = LocalDateTime.now().toString().replace(":", "-") + "_" + file.getOriginalFilename();
+        Path target = uploadDir.resolve(filename);
+        Files.write(target, file.getBytes());
+        String url = "/uploads/" + filename;
+        return ResponseEntity.ok(new ApiResponse<>(Map.of("url", url), "uploaded"));
     }
 }

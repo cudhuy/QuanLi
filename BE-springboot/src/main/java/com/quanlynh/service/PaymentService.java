@@ -65,6 +65,8 @@ public class PaymentService {
         payment.setStatus("completed");
         payment.setCreatedAt(LocalDateTime.now());
         payment.setUpdatedAt(LocalDateTime.now());
+        order.setStatus("completed");
+        orderRepository.save(order);
         return payment;
     }
 }

@@ -87,3 +87,11 @@ CREATE TABLE rates (
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
+
+-- Seed toi thieu
+INSERT INTO users (name, email, password, role, phone, created_at)
+VALUES ('admin', 'admin@example.com', '$2a$10$YLiNSO07hby2QlvO4lHduO0ZhdYvCEOP.y8b7uE8ja.8nEhT7/p9S', 'admin', '0000000000', NOW());
+
+INSERT INTO categories (name, created_at) VALUES ('Mon chinh', NOW());
+INSERT INTO tables (table_number, qr_code, created_at) VALUES ('B1', null, NOW());
+INSERT INTO menus (name, category_id, price, image, created_at) VALUES ('Com chien', 1, 45000, null, NOW());

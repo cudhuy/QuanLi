@@ -34,6 +34,7 @@ public class OrderService {
         }
         order.setStatus("pending");
         order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
 
         BigDecimal total = BigDecimal.ZERO;
         for (OrderItemRequest itemRequest : request.getItems()) {
@@ -55,9 +56,14 @@ public class OrderService {
         return orderItemRepository.findByOrderId(orderId);
     }
 
+    public Order getById(Long id) {
+        return orderRepository.findById(id).orElseThrow();
+    }
+
     public Order updateStatus(Long id, String status) {
         Order order = orderRepository.findById(id).orElseThrow();
         order.setStatus(status);
+        order.setUpdatedAt(LocalDateTime.now());
         return orderRepository.save(order);
     }
 }

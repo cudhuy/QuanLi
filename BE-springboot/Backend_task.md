@@ -88,7 +88,7 @@ Tai lieu nay la task cho agent AI de **migration backend Laravel** sang **Spring
 - [x] 2) Khoi tao project: Maven/Java21, dependency Web/Security/JPA/Validation/PostgreSQL/Lombok/JWT/MapStruct, config DB + port 8000
 - [x] 3) Core mapping: Entity + Repository, DTO/mapper/validation, Service/business logic (order, payment, booking, rating, chatbox/voucher neu co)
 - [x] 4) Auth & RBAC: login/logout/refresh, BCrypt password, role admin/staff/user, CORS/CSRF phu hop
-- [x] 5) API migration: Public (`/cate`, `/table`, `/list-menu`, `/order`, `/order-item/{id}`, `/popular-dishes`, `/booking`, `/chatbox`, `/rating/form/{order_id}`, `/rating/submit`, `/payment`, `/vnpay_payment`, `/vnpay_callback`, `/internal_payment`) va Auth/Admin/Staff (`/login`, `/logout`, `/admin/...`) giu nguyen path/format
+- [ ] 5) API migration: Public (`/cate`, `/table`, `/list-menu`, `/order`, `/order-item/{id}`, `/popular-dishes`, `/booking`, `/chatbox`, `/rating/form/{order_id}`, `/rating/submit`, `/payment`, `/vnpay_payment`, `/vnpay_callback`, `/internal_payment`) va Auth/Admin/Staff (`/login`, `/logout`, `/admin/...`) giu nguyen path/format
 - [ ] 6) Payment & ben ngoai: VNPay (request + checksum + callback cap nhat trang thai), internal payment (review_url/qr_code_base64), upload/storage public URL
-- [x] 7) Ket noi frontend: baseURL `/api` localhost:8000, headers/response wrapper/pagination/datetime format khop Laravel, CORS cho FE
+- [ ] 7) Ket noi frontend: baseURL `/api` localhost:8000, headers/response wrapper/pagination/datetime format khop Laravel, CORS cho FE
 - [ ] 8) Test & validation: Postman/curl pass, Smoke FE doi baseURL sang Spring Boot, cap nhat OpenAPI/Postman, log/error thong nhat, ghi ro config/env/secret

@@ -1,5 +1,7 @@
 package com.quanlynh.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +20,7 @@ public class Payment {
 
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnore
     private Order order;
 
     @Column(nullable = false)
@@ -34,4 +37,9 @@ public class Payment {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @JsonProperty("order_id")
+    public Long getOrderId() {
+        return order != null ? order.getId() : null;
+    }
 }
