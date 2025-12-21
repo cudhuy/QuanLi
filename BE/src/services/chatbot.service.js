@@ -23,7 +23,7 @@ async function getMenu() {
       description, 
       image_url
     FROM menu_items 
-    WHERE is_available = 1 
+    WHERE is_available = true 
     LIMIT 30
   `);
 
@@ -207,8 +207,8 @@ Nếu khách hỏi thông tin thêm hoặc chat thường, trả về:
       const items = await query(`
         SELECT id, name, price, description, image_url
         FROM menu_items 
-        WHERE is_available = 1 
-        ORDER BY RAND() 
+        WHERE is_available = true 
+        ORDER BY RANDOM() 
         LIMIT 3
       `);
 

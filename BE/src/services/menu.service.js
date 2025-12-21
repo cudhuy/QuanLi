@@ -7,10 +7,10 @@ export async function getAllMenuItems(name) {
   let params = [];
 
   if (name && name !== "all") {
-    sql = "SELECT * FROM menu_items WHERE is_available = 1 AND name LIKE ?";
+    sql = "SELECT * FROM menu_items WHERE is_available = true AND name LIKE ?";
     params.push(`%${name}%`);
   } else {
-    sql = "SELECT * FROM menu_items WHERE is_available = 1";
+    sql = "SELECT * FROM menu_items WHERE is_available = true";
   }
 
   const [rows] = await pool.query(sql, params);
@@ -52,7 +52,7 @@ export async function addMenuItem({ name, price, description, category_id, image
 
 // Lấy danh mục món
 export async function getMenuCategories() {
-  const sql = "SELECT * FROM menu_categories WHERE is_available = 1";
+  const sql = "SELECT * FROM menu_categories WHERE is_available = true";
   const rows = await query(sql);
   console.log("[getMenuCategories] rows:", rows);   // 👈 log ra để xem
   return rows;
@@ -67,7 +67,7 @@ export async function getItemsByCategory(id) {
     FROM menu_items mi
     JOIN menu_item_categories mic ON mi.id = mic.item_id
     JOIN menu_categories mc ON mc.id = mic.category_id
-    WHERE mic.category_id = ? AND mi.is_available = 1
+    WHERE mic.category_id = ? AND mi.is_available = true
     `,
     [id]
   );

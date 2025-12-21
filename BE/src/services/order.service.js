@@ -77,12 +77,20 @@ export async function createOrder({ qr_session_id, items }) {
       ]);
     }
 
-    // 4. Batch insert all order items
+    // 4. Batch insert all order items (PostgreSQL: build VALUES placeholders)
+    const flatValues = orderItems.flat();
+    const valuePlaceholders = orderItems
+      .map((_, idx) => {
+        const base = idx * 5;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+      })
+      .join(", ");
+
     await connection.query(
       `INSERT INTO order_items 
        (order_id, menu_item_id, quantity, note, unit_price)
-       VALUES ?`,
-      [orderItems]
+       VALUES ${valuePlaceholders}`,
+      flatValues
     );
 
     // 5. Database trigger will auto-calculate total_price
@@ -217,11 +225,19 @@ export async function addItem(orderId, itemsData) {
       ]);
     }
 
-    // 4. Batch insert all items
+    // 4. Batch insert all items (PostgreSQL placeholders)
+    const flatValues = orderItems.flat();
+    const valuePlaceholders = orderItems
+      .map((_, idx) => {
+        const base = idx * 5;
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+      })
+      .join(", ");
+
     await connection.query(
       `INSERT INTO order_items (order_id, menu_item_id, quantity, note, unit_price)
-       VALUES ?`,
-      [orderItems]
+       VALUES ${valuePlaceholders}`,
+      flatValues
     );
 
     // 5. Database trigger will auto-update total_price
