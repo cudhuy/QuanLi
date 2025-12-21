@@ -26,14 +26,14 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+            new UsernamePasswordAuthenticationToken(request.getName(), request.getPassword()));
         if (!authentication.isAuthenticated()) {
             throw new IllegalArgumentException("Invalid credentials");
         }
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByName(request.getName())
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        List<String> roles = user.getRoles().stream().map(role -> role.getName()).toList();
-        String token = jwtService.generateToken(user.getUsername(), roles);
-        return new LoginResponse(token, user.getUsername(), roles);
+        String role = user.getRole();
+        String token = jwtService.generateToken(user.getName(), List.of(role));
+        return new LoginResponse(token, user.getName(), List.of(role));
     }
 }

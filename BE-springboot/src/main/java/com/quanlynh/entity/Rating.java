@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ratings")
+@Table(name = "rates")
 @Getter
 @Setter
 public class Rating {
@@ -19,10 +19,17 @@ public class Rating {
     @JoinColumn(name = "order_id")
     private Order order;
 
+    @ManyToOne
+    @JoinColumn(name = "menu_id")
+    private MenuItem menu;
+
     private int rating;
 
     private String comment;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

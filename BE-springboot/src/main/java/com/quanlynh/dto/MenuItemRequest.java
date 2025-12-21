@@ -15,13 +15,9 @@ public class MenuItemRequest {
     @NotBlank
     private String name;
 
-    private String description;
-
     @NotNull
     @Min(0)
     private BigDecimal price;
 
     private String imageUrl;
-
-    private Boolean active;
 }

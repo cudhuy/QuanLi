@@ -1,7 +1,7 @@
 import { authHeader } from '../Api/Login';
 import { api } from '../Api/AxiosIntance';
 
-const API_URL = 'http://192.168.10.96:8000/api';
+const API_URL = 'http://localhost:8000/api';
 
 export interface Payment {
   id: number;

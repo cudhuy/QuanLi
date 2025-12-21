@@ -24,7 +24,7 @@ public class MenuService {
     }
 
     public List<MenuItem> listPopular() {
-        return menuItemRepository.findTop5ByOrderBySoldCountDesc();
+        return menuItemRepository.findTop5ByOrderByIdDesc();
     }
 
     public MenuItem create(MenuItemRequest request) {
@@ -43,11 +43,7 @@ public class MenuService {
         Category category = categoryRepository.findById(request.getCategoryId()).orElseThrow();
         item.setCategory(category);
         item.setName(request.getName());
-        item.setDescription(request.getDescription());
         item.setPrice(request.getPrice());
-        item.setImageUrl(request.getImageUrl());
-        if (request.getActive() != null) {
-            item.setActive(request.getActive());
-        }
+        item.setImage(request.getImageUrl());
     }
 }

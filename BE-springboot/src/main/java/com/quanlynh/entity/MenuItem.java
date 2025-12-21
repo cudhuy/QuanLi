@@ -7,7 +7,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "menu_items")
+@Table(name = "menus")
 @Getter
 @Setter
 public class MenuItem {
@@ -22,16 +22,9 @@ public class MenuItem {
     @Column(nullable = false)
     private String name;
 
-    private String description;
-
     @Column(nullable = false)
     private BigDecimal price;
 
-    @Column(name = "image_url")
-    private String imageUrl;
-
-    private boolean active = true;
-
-    @Column(name = "sold_count")
-    private int soldCount;
+    @Column(name = "image")
+    private String image;
 }

@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "dining_tables")
+@Table(name = "tables")
 @Getter
 @Setter
 public class DiningTable {
@@ -13,10 +13,9 @@ public class DiningTable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "table_number", nullable = false, unique = true)
+    private String tableNumber;
 
-    private int seats;
-
-    private String status;
+    @Column(name = "qr_code")
+    private String qrCode;
 }

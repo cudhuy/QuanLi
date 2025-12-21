@@ -6,22 +6,27 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "payments")
 @Getter
 @Setter
-public class Order {
+public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "table_id")
-    private DiningTable table;
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
+    @Column(nullable = false)
+    private BigDecimal amount;
+
+    @Column(nullable = false)
+    private String method;
+
+    @Column(nullable = false)
     private String status;
 
     @Column(name = "created_at")
@@ -29,10 +34,4 @@ public class Order {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @Column(name = "total_price", nullable = false)
-    private BigDecimal totalPrice;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> items = new ArrayList<>();
 }

@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "bookings")
@@ -15,22 +16,30 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
     @Column(name = "customer_name", nullable = false)
     private String customerName;
 
     @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
     private String phone;
 
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
+
     @Column(name = "booking_time", nullable = false)
-    private LocalDateTime bookingTime;
+    private LocalTime bookingTime;
 
     private int guests;
 
     private String status;
 
     private String note;
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private java.time.LocalDateTime updatedAt;
 }
