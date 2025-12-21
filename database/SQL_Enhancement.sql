@@ -94,3 +94,14 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER notification_order_update_trigger
 AFTER UPDATE ON orders
 FOR EACH ROW EXECUTE FUNCTION notification_order_update_function();
+
+-- Trigger auto-update updated_at on orders
+CREATE OR REPLACE FUNCTION trg_orders_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_orders_updated_at
+BEFORE UPDATE ON orders
+FOR EACH ROW EXECUTE FUNCTION trg_orders_updated_at();

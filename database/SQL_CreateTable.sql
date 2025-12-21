@@ -159,14 +159,16 @@ CREATE TYPE payment_method_enum AS ENUM ('BANKING', 'CASH');
 
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
-    qr_sessions_id BIGINT,
+    order_id BIGINT,
+    qr_session_id BIGINT,
     admin_id BIGINT,
     method payment_method_enum NOT NULL,
     amount DECIMAL(12, 2),
     paid_at TIMESTAMP DEFAULT NOW (),
     printed_bill BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE,
-    FOREIGN KEY (qr_sessions_id) REFERENCES qr_sessions (id) ON DELETE CASCADE
+    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+    FOREIGN KEY (qr_session_id) REFERENCES qr_sessions (id) ON DELETE CASCADE
 );
 
 -- 15️⃣ Tích điểm khách hàng
@@ -234,6 +236,7 @@ CREATE TYPE notification_type_enum AS ENUM (
     'WARNING',
     'INFO'
 );
+CREATE TYPE notification_priority_enum AS ENUM ('high', 'medium', 'low');
 
 CREATE TABLE notifications (
     id BIGSERIAL PRIMARY KEY,
@@ -244,7 +247,7 @@ CREATE TABLE notifications (
     type notification_type_enum DEFAULT 'SYSTEM',
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW (),
-    priority ENUM ('high', 'medium', 'low') DEFAULT 'medium',
+    priority notification_priority_enum DEFAULT 'medium',
     action_url VARCHAR(500),
     metadata JSONB
 );
