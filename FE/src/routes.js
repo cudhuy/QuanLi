@@ -1,13 +1,15 @@
 import LoginPage from "./page/management/auth/Login";
 import Home from "./page/management/Main/Homes";
 import OrderPage from "./page/management/Main/Orders";
-import MenuPage from "./page/management/Main/Categorys";
+import MenuPage from "./page/management/Main/Menus";
+import CategoriesPage from "./page/management/Main/Categories";
 import TablePage from "./page/management/Main/Tables";
 import CustomerPage from "./page/management/Main/Customers";
 import StaffPage from "./page/management/Main/Staffs";
+import AccountPage from "./page/management/Main/Accounts";
 import ReportsSalesPage from "./page/management/Main/ReportsSales";
-import ReportsProductsPage from "./page/management/Main/ReportsProducts";
 import ReportsCustomersPage from "./page/management/Main/ReportsCustomers";
+import ReportReviewPage from "./page/management/Main/ReportReview";
 import ReportsChatbotPage from "./page/management/Main/ReportsChatbots";
 
 import HomecsPage from "./page/cus/HomesCus";
@@ -16,104 +18,184 @@ import CartcsPage from "./page/cus/CartsCus";
 import BillcsPage from "./page/cus/BillsCus";
 import PaymentcsPage from "./page/cus/PaymentCus";
 import ChatbotcsPage from "./page/cus/ChatbotsCus";
+import ChatbotV2Page from "./page/cus/ChatbotV2Page";
 import ReviewcsPage from "./page/cus/ReviewsCus";
 import FoodReviewcsPage from "./page/cus/FoodReviewsCus";
 import LoyaltycsPage from "./page/cus/LoyaltysCus";
 import FoodDetailcsPage from "./page/cus/FoodDetailsCus";
+import NotFoundPage from "./page/NotFound";
 
-// Import AdminLayout
+// Import AdminLayout and ProtectedAdminRoute
 import AdminLayout from "./layouts/AdminLayout";
+import CustomerLayout from "./layouts/CustomerLayout";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+
+import OrderSessionPage from "./page/management/Main/Orders_SessionView";
 
 const routes = [
-  // Login page (không cần notifications)
+  // Login page (public - không cần protection)
   {
-    path: "/main/auth",
+    path: "/main/login",
     element: <LoginPage />,
   },
 
-  // Admin routes - Tất cả wrapped trong AdminLayout
-  // Dùng path tuyệt đối thay vì nested routes
+  {
+    path: "/main/order-old",
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><OrderPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
+  },
+
+  // Admin routes - Wrapped với ProtectedAdminRoute và AdminLayout
   {
     path: "/main/homes",
-    element: <AdminLayout><Home /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><Home /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/orders",
-    element: <AdminLayout><OrderPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><OrderSessionPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
+  },
+  {
+    path: "/main/menus",
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><MenuPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/categorys",
-    element: <AdminLayout><MenuPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><CategoriesPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/tables",
-    element: <AdminLayout><TablePage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><TablePage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/customers",
-    element: <AdminLayout><CustomerPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><CustomerPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/staffs",
-    element: <AdminLayout><StaffPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><StaffPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
+  },
+  {
+    path: "/main/accounts",
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><AccountPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/reports/sales",
-    element: <AdminLayout><ReportsSalesPage /></AdminLayout>,
-  },
-  {
-    path: "/main/reports/products",
-    element: <AdminLayout><ReportsProductsPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><ReportsSalesPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/reports/customers",
-    element: <AdminLayout><ReportsCustomersPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><ReportsCustomersPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
+  },
+  {
+    path: "/main/reports/reviews",
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><ReportReviewPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
   {
     path: "/main/reports/chatbots",
-    element: <AdminLayout><ReportsChatbotPage /></AdminLayout>,
+    element: (
+      <ProtectedAdminRoute>
+        <AdminLayout><ReportsChatbotPage /></AdminLayout>
+      </ProtectedAdminRoute>
+    ),
   },
 
-  // Customer routes (không cần AdminLayout)
+  // Customer routes (wrapped với CustomerLayout để nhận notification)
   {
     path: "/cus/homes",
-    element: <HomecsPage />,
+    element: <CustomerLayout><HomecsPage /></CustomerLayout>,
   },
   {
     path: "/cus/menus",
-    element: <MenucsPage />,
+    element: <CustomerLayout><MenucsPage /></CustomerLayout>,
   },
   {
     path: "/cus/carts",
-    element: <CartcsPage />,
+    element: <CustomerLayout><CartcsPage /></CustomerLayout>,
   },
   {
     path: "/cus/bills",
-    element: <BillcsPage />,
+    element: <CustomerLayout><BillcsPage /></CustomerLayout>,
   },
   {
     path: "/cus/payment",
-    element: <PaymentcsPage />,
+    element: <CustomerLayout><PaymentcsPage /></CustomerLayout>,
   },
   {
     path: "/cus/chatbot",
-    element: <ChatbotcsPage />,
+    element: <CustomerLayout><ChatbotcsPage /></CustomerLayout>,
+  },
+  {
+    path: "/cus/chatbot-v2",
+    element: <CustomerLayout><ChatbotV2Page /></CustomerLayout>,
   },
   {
     path: "/cus/reviews",
-    element: <ReviewcsPage />,
+    element: <CustomerLayout><ReviewcsPage /></CustomerLayout>,
   },
   {
     path: "/cus/foodreviews",
-    element: <FoodReviewcsPage />,
+    element: <CustomerLayout><FoodReviewcsPage /></CustomerLayout>,
   },
   {
     path: "/cus/loyaltys",
-    element: <LoyaltycsPage />,
+    element: <CustomerLayout><LoyaltycsPage /></CustomerLayout>,
   },
   {
     path: "/cus/fooddetails/:id",
-    element: <FoodDetailcsPage />,
+    element: <CustomerLayout><FoodDetailcsPage /></CustomerLayout>,
+  },
+
+  // 404 Not Found - Must be last route (catch-all)
+  {
+    path: "*",
+    element: <NotFoundPage />,
   }
 ];
 

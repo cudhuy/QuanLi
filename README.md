@@ -86,7 +86,7 @@ Hệ thống gọi món & thanh toán nhà hàng bằng QR Code, hỗ trợ real
 ### Observability
 - Thêm logging cấu trúc (request id, user id, response time).
 - Theo dõi lỗi (Sentry hoặc tương đương).
-UX/Flow khách hàng
+### UX/Flow khách hàng
 - Rõ ràng hoá flow quét QR → tạo session → đặt món.
 - Thông báo lỗi thân thiện, trạng thái loading nhất quán.
 ### Thanh toán
@@ -109,10 +109,23 @@ http://localhost:8000/api
 ### Menu (/menu)
 - GET /cus/menus/categories
 - GET /cus/menus/item/:id
-- GET /cus/menus/:name
 - GET /cus/menus/category/:id
-- GET /cus/menus/all
+- GET /cus/menus/:name
+- GET /admin/categories/:id
+- POST /admin/categories
+- PUT /admin/categories/:id
+- DELETE /admin/categories/:id
+- DELETE /admin/categories/:id/permanent
+- GET /admin/categories/export/excel
+- GET /admin/categories/template/excel
+- POST /admin/categories/import/excel
+- GET /admin/menus/export/excel
+- GET /admin/menus/template/excel
+- POST /admin/menus/import/excel
 - POST /admin/menus
+- PUT /admin/menus/:id
+- DELETE /admin/menus/:id
+- DELETE /admin/menus/:id/permanent
 
 ### Menu Item Admin (/menu-item)
 - PUT /:id
@@ -121,8 +134,13 @@ http://localhost:8000/api
 ### Cart (/cart)
 - GET /cus/cart
 - POST /cus/cart
+- DELETE /
+- PUT /items/:id
+- DELETE /items/:id
+- PUT /:id/status
 
 ### Orders (/orders)
+- POST /admin/create
 - GET /
 - GET /session/:qr_session_id
 - GET /table/:table_id
@@ -130,6 +148,9 @@ http://localhost:8000/api
 - POST /
 - POST /:id/items
 - PUT /:id/status
+- PUT /:orderId/cancel
+- DELETE /:orderId/items/:itemId
+- PUT /:orderId/items/:itemId
 
 ### Staff Orders (/staff/orders)
 - PUT /:id/confirm
@@ -137,21 +158,43 @@ http://localhost:8000/api
 - PUT /item/:itemId
 
 ### Payment (/payment)
-- POST /
-- POST /callback
+- POST /admin
+- POST /session
+- POST /generate-qr
 - POST /refund
+- POST /callback
+- POST /noti
+- POST /
 - GET /
 - GET /:id
+- PUT /session/:sessionId/cancel
 
 ### Customers (/customers)
 - POST /
+- GET /me/:identifier
+- POST /calculate-points
 - GET /
+- GET /:id
+- PUT /:id
+- PUT /:id/points
+- GET /:id/history
+- DELETE /:id
 
 ### Call Staff (/call-staff)
 - POST /
 
 ### Chatbot (/chatbot)
 - POST /
+
+### Chatbot V2 (/chatbot-v2)
+- POST /chat
+- GET /history/:session_id
+- DELETE /conversation/:session_id
+- POST /thread
+- GET /rate-limit-status
+- GET /cache-stats
+- DELETE /cache/:thread_id
+- GET /health
 
 ### Review (/review)
 Restaurant:
@@ -167,12 +210,29 @@ Menu:
 
 ### Admin (/admin)
 - POST /login
+- GET /validate
 - POST /register-admin
 - GET /man/logins
+- GET /stats
+- GET /search
+- GET /
+- GET /:id
+- GET /:id/employee
+- PUT /:id
+- PUT /:id/password
+- PUT /:id/reset-password
+- PUT /:id/deactivate
+- PUT /:id/activate
+- POST /:id/restore
+- DELETE /:id
+- DELETE /:id/permanent
 
 ### QR Sessions (/qr-sessions)
 - POST /scan
+- GET /:id/validate
 - PUT /:id/end
+- PUT /:sessionId/customer
+- GET /:id
 
 ### QR Codes (/qr)
 - POST /generate/:tableId
@@ -185,9 +245,10 @@ Menu:
 
 ### Tables (/tables)
 - POST /
+- GET /
 - PUT /:id
 - DELETE /:id
-- GET /
+- GET /:id
 
 ### Audit (/audit)
 - POST /
@@ -204,8 +265,55 @@ Menu:
 - DELETE /:id
 - DELETE /clear-all
 
-### Static QR Images
+### Employees (/employees)
+- GET /stats
+- GET /search
+- GET /
+- GET /:id
+- POST /
+- PUT /:id
+- POST /:id/restore
+- DELETE /:id
+- DELETE /:id/permanent
+
+### Dashboard (/dashboard)
+- GET /stats
+- GET /revenue
+- GET /top-dishes
+- GET /order-status
+- GET /table-status
+- GET /recent-orders
+- GET /performance
+
+### Dashboard Sales (/dashboard/sales)
+- GET /trend
+- GET /dishes
+- GET /categories
+
+### Dashboard Customers (/dashboard/customers)
+- GET /loyalty-trend
+- GET /top
+- GET /point-distribution
+
+### Dashboard Reviews (/dashboard/reviews)
+- GET /restaurant/stats
+- GET /restaurant/trend
+- GET /restaurant/recent
+- GET /restaurant/detail
+- GET /menu/stats
+- GET /menu/trend
+- GET /menu/top-rated
+- GET /menu/lowest-rated
+- GET /menu/recent
+- GET /menu/detail
+- GET /distribution
+
+### Points (/points)
+- GET /customer/:customerId
+
+### Static Files
 ```
 GET /qr/<file>
+GET /uploads/<file>
 ```
-(không có tiền tố /api)
+(not prefixed by /api)
