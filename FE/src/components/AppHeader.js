@@ -1,49 +1,29 @@
-import React, { useState, useEffect } from "react";
-import { Layout, Button, Dropdown, Space, Badge } from "antd";
+import React, { useState } from "react";
+import { Layout, Button, Badge, Dropdown } from "antd";
 import {
   MenuUnfoldOutlined,
   MenuFoldOutlined,
   BellOutlined,
-  UserOutlined,
-  DownOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
+import { useAuth } from "../hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
+import UserProfile from "./UserProfile";
 
 const { Header } = Layout;
 
 const AppHeader = ({ collapsed, setCollapsed, pageTitle }) => {
-  const [isMobile, setIsMobile] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
+  const { user, logout } = useAuth();
 
-  // Menu user
-  const handleMenuClick = ({ key }) => {
-    if (key === "1") {
-      localStorage.removeItem("token");
-      sessionStorage.clear();
-      navigate("/main/auth");
-    }
+  // Handle user logout
+  const handleLogout = () => {
+    logout();
+    navigate("/main/auth");
   };
-
-  const userMenu = {
-    items: [
-      { key: "1", label: "Đăng xuất" },
-    ],
-    onClick: handleMenuClick,
-  };
-
-  // Lắng nghe thay đổi kích thước màn hình
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
     <Header
@@ -88,14 +68,19 @@ const AppHeader = ({ collapsed, setCollapsed, pageTitle }) => {
           getPopupContainer={(trigger) => trigger.parentElement}
         >
           <Badge
+            className="mr-5"
+            style={{
+              fontSize: 12,
+              height: 20,
+              maxWidth: 24,
+            }}
             count={unreadCount}
-            overflowCount={99}
-            offset={[-4, 4]}
+            overflowCount={9}
           >
             <BellOutlined
               style={{
-                fontSize: 22,
-                marginRight: 20,
+                fontSize: 24,
+                marginRight: 0,
                 color: "#226533",
                 cursor: "pointer",
               }}
@@ -103,15 +88,8 @@ const AppHeader = ({ collapsed, setCollapsed, pageTitle }) => {
           </Badge>
         </Dropdown>
 
-        <Dropdown menu={userMenu}>
-          <Button type="text" style={{ fontSize: 16, color: "#333" }}>
-            <Space>
-              <UserOutlined />
-              {!isMobile && "ThuyDung (Quản lý)"}
-              {!isMobile && <DownOutlined />}
-            </Space>
-          </Button>
-        </Dropdown>
+        {/* User Profile Dropdown */}
+        {user && <UserProfile user={user} onLogout={handleLogout} />}
       </div>
     </Header>
   );

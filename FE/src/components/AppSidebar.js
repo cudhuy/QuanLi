@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Layout, Menu } from "antd";
 import {
   AppstoreOutlined,
@@ -9,42 +9,60 @@ import {
   BarChartOutlined,
   TableOutlined,
   WindowsOutlined,
+  SafetyOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const { Sider } = Layout;
 
 const AppSidebar = ({ collapsed, currentPageKey, setPageTitle }) => {
   const navigate = useNavigate();
+  const menuContainerRef = useRef(null);
+  const { user } = useAuth();
 
-  // Khởi tạo openKeys từ localStorage hoặc tự động mở dựa trên currentPageKey
+  // Lưu trạng thái mở/đóng của submenu vào localStorage
   const [openKeys, setOpenKeys] = useState(() => {
-    const saved = localStorage.getItem("sidebarOpenKeys");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Tự động mở submenu nếu đang ở trang con
-    if (["categorys", "tables"].includes(currentPageKey)) {
-      return ["category"];
-    }
-    if (["report_sales", "report_products", "report_customers", "report_chatbot"].includes(currentPageKey)) {
-      return ["report"];
-    }
-    return [];
+    const saved = localStorage.getItem('sidebarOpenKeys');
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Lưu openKeys vào localStorage mỗi khi thay đổi
+  // Lưu vào localStorage mỗi khi openKeys thay đổi
   useEffect(() => {
-    localStorage.setItem("sidebarOpenKeys", JSON.stringify(openKeys));
+    localStorage.setItem('sidebarOpenKeys', JSON.stringify(openKeys));
   }, [openKeys]);
 
-  // Tự động mở submenu khi chuyển trang
+  // Đảm bảo submenu mở khi sidebar mở và currentPageKey thuộc submenu
   useEffect(() => {
-    if (["categorys", "tables"].includes(currentPageKey) && !openKeys.includes("category")) {
-      setOpenKeys((prev) => [...prev, "category"]);
+    if (!collapsed && currentPageKey) {
+      const parentKey = getParentKey(currentPageKey);
+      if (parentKey && !openKeys.includes(parentKey)) {
+        setOpenKeys([...openKeys, parentKey]);
+      }
     }
-    if (["report_sales", "report_products", "report_customers", "report_chatbot"].includes(currentPageKey) && !openKeys.includes("report")) {
-      setOpenKeys((prev) => [...prev, "report"]);
+  }, [collapsed, currentPageKey]);
+
+  // Helper function để tìm parent key
+  const getParentKey = (key) => {
+    if (['menus', 'categorys'].includes(key)) return 'products';
+    if (['report_sales', 'report_customers', 'report_reviews'].includes(key)) return 'report';
+    return null;
+  };
+
+  // Scroll đến menu item được chọn
+  useEffect(() => {
+    if (currentPageKey && menuContainerRef.current) {
+      setTimeout(() => {
+        const selectedElement = menuContainerRef.current.querySelector(
+          `.ant-menu-item-selected, .ant-menu-submenu-selected`
+        );
+        if (selectedElement) {
+          selectedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
+      }, 100);
     }
   }, [currentPageKey]);
 
@@ -52,20 +70,57 @@ const AppSidebar = ({ collapsed, currentPageKey, setPageTitle }) => {
   const menuConfig = {
     homes: { path: "/main/homes", title: "Tổng quan" },
     orders: { path: "/main/orders", title: "Đơn hàng" },
-    categorys: { path: "/main/categorys", title: "Thực đơn" },
+    categorys: { path: "/main/categorys", title: "Danh mục" },
+    menus: { path: "/main/menus", title: "Thực đơn" },
     tables: { path: "/main/tables", title: "Bàn" },
     customers: { path: "/main/customers", title: "Khách hàng" },
     staffs: { path: "/main/staffs", title: "Nhân viên" },
+    accounts: { path: "/main/accounts", title: "Tài khoản" },
     report_sales: { path: "/main/reports/sales", title: "Báo cáo bán hàng" },
-    report_products: { path: "/main/reports/products", title: "Báo cáo sản phẩm" },
     report_customers: { path: "/main/reports/customers", title: "Báo cáo khách hàng" },
-    report_chatbot: { path: "/main/reports/chatbots", title: "Báo cáo Chatbot" },
+    report_reviews: { path: "/main/reports/reviews", title: "Báo cáo đánh giá" },
   };
 
-  const toggleSubmenu = (key) => {
-    setOpenKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+  // Dynamic menu items based on user role
+  const getMenuItems = () => {
+    const allMenuItems = [
+      { key: "homes", icon: <AppstoreOutlined />, label: "Tổng quan" },
+      { key: 'tables', icon: <TableOutlined />, label: 'Bàn' },
+      { key: "orders", icon: <ShoppingCartOutlined />, label: "Đơn hàng" },
+      {
+        key: "products",
+        icon: <WindowsOutlined />,
+        label: "Sản phẩm",
+        children: [
+          { key: "menus", icon: <CoffeeOutlined />, label: "Thực đơn" },
+          { key: "categorys", icon: <CoffeeOutlined />, label: "Danh mục" }
+        ],
+      },
+      { key: "customers", icon: <UserOutlined />, label: "Khách hàng" },
+      { key: "staffs", icon: <TeamOutlined />, label: "Nhân viên", roles: ['OWNER', 'MANAGER'] },
+      { key: "accounts", icon: <SafetyOutlined />, label: "Tài khoản", roles: ['OWNER', 'MANAGER'] },
+      {
+        key: "report",
+        icon: <BarChartOutlined />,
+        label: "Báo cáo",
+        roles: ['OWNER', 'MANAGER'],
+        children: [
+          { key: "report_sales", label: "Báo cáo bán hàng" },
+          { key: "report_customers", label: "Báo cáo khách hàng" },
+          { key: "report_reviews", label: "Báo cáo đánh giá" },
+        ],
+      },
+    ];
+
+    // Filter menu items based on user role
+    const userRole = user?.role;
+
+    return allMenuItems.filter(item => {
+      // If item doesn't have roles restriction, show to everyone
+      if (!item.roles) return true;
+      // If item has roles restriction, check if user has the role
+      return item.roles.includes(userRole);
+    });
   };
 
   return (
@@ -74,75 +129,42 @@ const AppSidebar = ({ collapsed, currentPageKey, setPageTitle }) => {
       collapsible
       collapsed={collapsed}
       width={220}
-      style={{
-        background: "#fff",
-        position: "fixed",
-        left: 0,
-        top: 0,
-        bottom: 0,
-        zIndex: 100,
-      }}
+      className="fixed left-0 top-0 bottom-0 z-[100] bg-white"
     >
-      {/* Logo */}
-      <div
-        style={{
-          height: 100,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          overflow: "hidden",
-        }}
-      >
+      {/* Logo - Grid Layout */}
+      <div className="h-24 grid place-items-center overflow-hidden">
         <img
           src="/assets/images/Logo.png"
           alt="logo"
-          style={{ height: collapsed ? 40 : 80 }}
+          className={collapsed ? "h-10" : "h-20"}
         />
       </div>
 
-      {/* Menu có scroll */}
+      {/* Menu với scroll - Grid Layout */}
       <div
+        ref={menuContainerRef}
+        className="h-[calc(100%-6rem)] overflow-y-auto scrollbar-hide"
         style={{
-          height: "calc(100% - 100px)", // trừ chiều cao logo
-          overflowY: "auto",
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
         <Menu
           mode="inline"
           selectedKeys={[currentPageKey]}
-          openKeys={openKeys}
+          openKeys={collapsed ? undefined : openKeys}
+          onOpenChange={(keys) => {
+            // Chỉ update khi sidebar đang mở
+            if (!collapsed) {
+              setOpenKeys(keys);
+            }
+          }}
           onClick={(e) => {
             navigate(menuConfig[e.key].path);
             if (setPageTitle) setPageTitle(menuConfig[e.key].title);
           }}
-          items={[
-            { key: "homes", icon: <AppstoreOutlined />, label: "Tổng quan" },
-            { key: "orders", icon: <ShoppingCartOutlined />, label: "Đơn hàng" },
-            {
-              key: "category",
-              icon: <WindowsOutlined />,
-              label: "Danh mục",
-              children: [
-                { key: "categorys", icon: <CoffeeOutlined />, label: "Thực đơn" },
-                { key: "tables", icon: <TableOutlined />, label: "Bàn" },
-              ],
-              onTitleClick: () => toggleSubmenu("category"),
-            },
-            { key: "customers", icon: <UserOutlined />, label: "Khách hàng" },
-            { key: "staffs", icon: <TeamOutlined />, label: "Nhân viên" },
-            {
-              key: "report",
-              icon: <BarChartOutlined />,
-              label: "Báo cáo",
-              children: [
-                { key: "report_sales", label: "Báo cáo bán hàng" },
-                { key: "report_products", label: "Báo cáo sản phẩm" },
-                { key: "report_customers", label: "Báo cáo khách hàng" },
-                { key: "report_chatbot", label: "Báo cáo Chatbot" },
-              ],
-              onTitleClick: () => toggleSubmenu("report"),
-            },
-          ]}
+          inlineCollapsed={collapsed}
+          items={getMenuItems()}
         />
       </div>
     </Sider>
