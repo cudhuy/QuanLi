@@ -72,6 +72,33 @@ Hệ thống gọi món & thanh toán nhà hàng bằng QR Code, hỗ trợ real
 - Chatbot
 - Dashboard quản lý
 
+## Cần cải thiện
+
+### Ổn định dữ liệu & DB
+- Chuẩn hóa migration + seed (PostgreSQL), có script reset sequence, rollback.
+- Rà soát ràng buộc FK, enum, index cho truy vấn báo cáo.
+### Kiểm thử & chất lượng
+- Thêm test API cốt lõi (orders, payment, QR session, cart).
+- Thiết lập CI chạy lint/test.
+### Bảo mật & phân quyền
+- Rà soát middleware auth/role ở toàn bộ route admin.
+- Hạn chế log dữ liệu nhạy cảm, chuẩn hóa error response.
+### Observability
+- Thêm logging cấu trúc (request id, user id, response time).
+- Theo dõi lỗi (Sentry hoặc tương đương).
+UX/Flow khách hàng
+- Rõ ràng hoá flow quét QR → tạo session → đặt món.
+- Thông báo lỗi thân thiện, trạng thái loading nhất quán.
+### Thanh toán
+- Hoàn thiện callback & đối soát trạng thái giao dịch.
+- Xử lý retry, timeout, và hoàn tiền an toàn.
+### Tài liệu & hướng dẫn
+- API docs đầy đủ + collection Thunder/Postman.
+- Hướng dẫn vận hành (setup env, run, migrate, seed).
+### Tối ưu hiệu năng
+- Cache menu/chatbot, giới hạn size upload, tối ưu ảnh Cloudinary.
+- Tối ưu query dashboard/báo cáo.
+
 ## 🔗 API
 
 Base URL:

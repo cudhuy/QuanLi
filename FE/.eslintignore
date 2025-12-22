@@ -1,0 +1,4 @@
+src
+src/**
+jsconfig.json
+node_modules
