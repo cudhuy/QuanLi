@@ -18,7 +18,7 @@ class NotificationService {
 
     /**
      * Initialize Socket.IO connection
-     * @param {number} userId - User ID
+     * @param {number} userId - User ID (hoặc qrSessionId nếu là CUSTOMER)
      * @param {string} userType - User type (STAFF, CUSTOMER)
      */
     initializeSocket(userId, userType = 'STAFF') {
@@ -28,7 +28,13 @@ class NotificationService {
 
             // Socket đã tồn tại, chỉ cần join rooms lại
             console.log('🔄 Re-joining rooms for userId:', userId, 'userType:', userType);
-            this.socket.emit('join', { userId, userType });
+
+            // CUSTOMER join với qrSessionId
+            if (userType === 'CUSTOMER') {
+                this.socket.emit('join', { qrSessionId: userId, userType: 'CUSTOMER' });
+            } else {
+                this.socket.emit('join', { userId, userType });
+            }
             return;
         }
 
@@ -48,7 +54,13 @@ class NotificationService {
                 console.log('📊 Listeners registered:', this.listeners.size);
 
                 // Join user-specific and type-specific rooms
-                this.socket.emit('join', { userId, userType });
+                // CUSTOMER join với qrSessionId
+                if (userType === 'CUSTOMER') {
+                    console.log('🔐 Customer joining with qrSessionId:', userId);
+                    this.socket.emit('join', { qrSessionId: userId, userType: 'CUSTOMER' });
+                } else {
+                    this.socket.emit('join', { userId, userType });
+                }
             });
 
             this.socket.on('disconnect', () => {
@@ -128,7 +140,6 @@ class NotificationService {
             console.log(`🔄 Calling listener #${index + 1}`);
             try {
                 listener(notification);
-                console.log(`✅ Listener #${index + 1} executed successfully`);
             } catch (error) {
                 console.error(`❌ Listener #${index + 1} error:`, error);
             }
