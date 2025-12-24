@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import axios from 'axios';
+import notificationService from '../services/notificationService';
 
 // Session State Types
 const SESSION_ACTIONS = {
@@ -85,6 +86,22 @@ export const SessionProvider = ({ children }) => {
     dispatch({ type: SESSION_ACTIONS.CLEAR_SESSION });
   };
 
+  // ✅ Update session status without removing it
+  const updateSessionStatus = (newStatus) => {
+    try {
+      const sessionData = localStorage.getItem('qr_session');
+      if (sessionData) {
+        const session = JSON.parse(sessionData);
+        const updatedSession = { ...session, status: newStatus };
+        localStorage.setItem('qr_session', JSON.stringify(updatedSession));
+        dispatch({ type: SESSION_ACTIONS.SET_SESSION, payload: updatedSession });
+        console.log(`✅ Session status updated to: ${newStatus}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating session status:', error);
+    }
+  };
+
   const setupAxiosInterceptor = (sessionId) => {
     // Remove existing interceptor if any
     axios.interceptors.request.eject(axios.defaults.sessionInterceptorId);
@@ -107,7 +124,7 @@ export const SessionProvider = ({ children }) => {
 
   // Initialize session from localStorage on app start
   useEffect(() => {
-    const initSession = () => {
+    const initSession = async () => {
       try {
         const savedSession = localStorage.getItem('qr_session');
         console.log('🔍 Checking localStorage for qr_session:', savedSession);
@@ -117,31 +134,139 @@ export const SessionProvider = ({ children }) => {
           console.log('📦 Parsed session data:', sessionData);
 
           // Validate session data structure
-          if (isValidSessionData(sessionData)) {
-            console.log('✅ Session is valid, restoring...');
-            dispatch({ type: SESSION_ACTIONS.SET_SESSION, payload: sessionData });
-            setupAxiosInterceptor(sessionData.session_id);
-          } else {
-            console.warn('⚠️ Invalid session data structure:', sessionData);
-            console.log('Missing fields:', {
-              hasSessionId: !!sessionData.session_id,
-              hasTableId: !!sessionData.table_id,
-              hasTableNumber: !!sessionData.table_number
-            });
-            // Don't auto-clear, just log warning
+          if (!isValidSessionData(sessionData)) {
+            console.warn('⚠️ Invalid session data structure, clearing...');
+            clearSession();
+            return;
+          }
+
+          // ✨ NEW: Validate session với backend
+          console.log('🔄 Validating session with backend...');
+          const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
+
+          try {
+            const response = await axios.get(
+              `${REACT_APP_API_URL}/qr-sessions/${sessionData.session_id}/validate`
+            );
+
+            console.log('📡 Validation response:', response.data);
+
+            if (response.data.valid) {
+              // Session hợp lệ → Restore
+              console.log('✅ Session is valid, restoring...');
+              dispatch({ type: SESSION_ACTIONS.SET_SESSION, payload: sessionData });
+              setupAxiosInterceptor(sessionData.session_id);
+            } else {
+              // Session không hợp lệ
+              console.warn('❌ Session invalid:', response.data.reason);
+              console.warn('Message:', response.data.message);
+
+              // ✅ Nếu session COMPLETED → Giữ lại nhưng không cho phép order mới
+              if (response.data.reason === 'SESSION_COMPLETED') {
+                console.log('✅ Session COMPLETED - Keeping for bills/reviews');
+                dispatch({ type: SESSION_ACTIONS.SET_SESSION, payload: sessionData });
+                setupAxiosInterceptor(sessionData.session_id);
+              } else if (response.data.shouldClear) {
+                // Các trường hợp khác (expired, table inactive) → Xóa localStorage
+                console.log('🗑️ Clearing invalid session from localStorage');
+                clearSession();
+              }
+
+              // Show notification to user
+              // notification.warning({
+              //   message: 'Session hết hạn',
+              //   description: response.data.message,
+              //   duration: 5
+              // });
+            }
+          } catch (validationError) {
+            console.error('❌ Error validating session:', validationError);
+
+            // Nếu network error hoặc 500 → Giữ session tạm thời
+            if (validationError.response?.status >= 500) {
+              console.log('⚠️ Server error, keeping session temporarily');
+              dispatch({ type: SESSION_ACTIONS.SET_SESSION, payload: sessionData });
+              setupAxiosInterceptor(sessionData.session_id);
+            } else {
+              // Other errors → Clear session
+              console.log('🗑️ Clearing session due to validation error');
+              clearSession();
+            }
           }
         } else {
           console.log('ℹ️ No saved session found in localStorage');
         }
       } catch (error) {
         console.error('❌ Error initializing session:', error);
-        // Don't auto-clear on error, just log it
+        clearSession();
       }
     };
 
     initSession();
   }, []); // Empty dependency array - only run once on mount
 
+  // ✅ Listen for session status changes via Socket.IO
+  useEffect(() => {
+    if (!state.session?.session_id) return;
+
+    const handleSessionEnded = (notification) => {
+      console.log('📡 Session ended notification received:', notification);
+
+      // Check if notification is for current session
+      if (notification.data?.sessionId === state.session.session_id) {
+        console.log('✅ Current session ended by admin');
+
+        // Update session status to COMPLETED
+        updateSessionStatus('COMPLETED');
+
+        // Optional: Show notification to user
+        // message.info('Phiên đã được kết thúc bởi nhà hàng');
+      }
+    };
+
+    // Register listener
+    const removeListener = notificationService.addListener(handleSessionEnded);
+    console.log('✅ Session status listener registered');
+
+    return () => {
+      if (removeListener) {
+        removeListener();
+        console.log('🔌 Session status listener removed');
+      }
+    };
+  }, [state.session?.session_id]);
+
+  // ✅ Polling to sync session status every 30 seconds (fallback if Socket.IO fails)
+  useEffect(() => {
+    if (!state.session?.session_id || state.session?.status === 'COMPLETED') return;
+
+    const syncSessionStatus = async () => {
+      try {
+        const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
+        const response = await axios.get(
+          `${REACT_APP_API_URL}/qr-sessions/${state.session.session_id}/validate`
+        );
+
+        const backendStatus = response.data.data?.status;
+
+        // If status changed on backend, update local
+        if (backendStatus && backendStatus !== state.session.status) {
+          console.log(`🔄 Session status changed: ${state.session.status} → ${backendStatus}`);
+          updateSessionStatus(backendStatus);
+        }
+      } catch (error) {
+        console.error('❌ Error syncing session status:', error);
+      }
+    };
+
+    // Initial sync
+    syncSessionStatus();
+
+    // Poll every 30 seconds
+    const intervalId = setInterval(syncSessionStatus, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [state.session?.session_id, state.session?.status]);
 
   const createSession = async (tableId, sessionToken) => {
     dispatch({ type: SESSION_ACTIONS.SET_LOADING, payload: true });
@@ -158,7 +283,8 @@ export const SessionProvider = ({ children }) => {
         table_id: response.data.data.table_id,
         table_number: response.data.data.table_number,
         status: response.data.data.status,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        expired_at: response.data.data.expired_at // NEW: Lưu thời gian expire
       };
 
       // Save to localStorage
@@ -204,6 +330,7 @@ export const SessionProvider = ({ children }) => {
     // Actions
     createSession,
     clearSession,
+    updateSessionStatus, // ✅ Export new function
     refreshSession,
 
     // Utilities
