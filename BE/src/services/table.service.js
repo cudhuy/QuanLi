@@ -1,6 +1,22 @@
 import { query } from "../config/db.js";
 import QRCodeUtils from "../utils/qrCodeUtils.js";
 
+// ✅ Get table detail by ID
+export async function getTableById(id) {
+    try {
+        const rows = await query("SELECT * FROM tables WHERE id = ? AND deleted_at IS NULL", [id]);
+
+        if (!rows || rows.length === 0) {
+            throw new Error(`Table with ID ${id} not found`);
+        }
+
+        return rows[0];
+    } catch (error) {
+        console.error("Error getting table by ID:", error);
+        throw new Error(`Failed to get table: ${error.message}`);
+    }
+}
+
 export async function createTable({ table_number }) {
     try {
         // Step 1: Create table record first (without QR URL)
@@ -34,19 +50,55 @@ export async function createTable({ table_number }) {
     }
 }
 
-export async function updateTable(id, { table_number, is_active }) {
-    await query("UPDATE tables SET table_number=?, is_active=? WHERE id=?", [
-        table_number,
-        is_active,
-        id,
-    ]);
-    return { id, table_number, is_active };
+export async function updateTable(id, { table_number, is_active, regenerate_qr }) {
+    try {
+        // Step 1: Update basic table info
+        await query("UPDATE tables SET table_number=?, is_active=? WHERE id=?", [
+            table_number,
+            is_active,
+            id,
+        ]);
+
+        // Step 2: Check if QR code regeneration is requested
+        if (regenerate_qr === true) {
+            // Generate new QR code
+            const qrResult = await QRCodeUtils.generateTableQR(id);
+
+            // Update table with new QR code URL
+            await query(
+                "UPDATE tables SET qr_code_url = ? WHERE id = ?",
+                [qrResult.imagePath, id]
+            );
+
+            return {
+                id,
+                table_number,
+                is_active,
+                qr_code_url: qrResult.imagePath,
+                qr_url: qrResult.qrUrl,
+                session_token: qrResult.sessionToken,
+                regenerated_at: qrResult.generatedAt,
+                message: "Table updated and QR code regenerated successfully"
+            };
+        }
+
+        // Return updated table info without QR regeneration
+        return {
+            id,
+            table_number,
+            is_active,
+            message: "Table updated successfully"
+        };
+    } catch (error) {
+        console.error("Error updating table:", error);
+        throw new Error(`Failed to update table: ${error.message}`);
+    }
 }
 
 export async function deleteTable(id) {
     try {
-        // Check if table exists
-        const [table] = await query("SELECT * FROM tables WHERE id = ?", [id]);
+        // Check if table exists and not already deleted
+        const [table] = await query("SELECT * FROM tables WHERE id = ? AND deleted_at IS NULL", [id]);
         if (!table) {
             throw new Error(`Table with ID ${id} not found`);
         }
@@ -72,8 +124,8 @@ export async function deleteTable(id) {
             throw new Error(`Cannot delete table ${table.table_number}. There are pending orders.`);
         }
 
-        // Safe to delete - remove table record
-        await query("DELETE FROM tables WHERE id = ?", [id]);
+        // Soft delete - set deleted_at timestamp
+        await query("UPDATE tables SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL", [id]);
 
         // Note: QR image file will remain for reference, can be cleaned up separately
         return {
@@ -87,5 +139,5 @@ export async function deleteTable(id) {
 }
 
 export async function getTables() {
-    return await query("SELECT * FROM tables");
+    return await query("SELECT * FROM tables WHERE deleted_at IS NULL");
 }
