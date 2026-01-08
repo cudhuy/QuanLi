@@ -1,22 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 /**
- * Custom hook để quản lý trạng thái collapsed của sidebar
- * Lưu trữ vào localStorage để duy trì trạng thái khi refresh trang
+ * Custom hook để quản lý trạng thái mở/đóng của sidebar
+ * Lưu trạng thái vào localStorage để persist khi reload trang
  */
-const useSidebarCollapse = () => {
-  const [collapsed, setCollapsed] = useState(() => {
-    // Lấy giá trị từ localStorage khi khởi tạo
-    const savedCollapsed = localStorage.getItem("sidebarCollapsed");
-    return savedCollapsed === "true"; // Convert string to boolean
-  });
+const useSidebarCollapse = (defaultCollapsed = false) => {
+    // Lấy trạng thái từ localStorage, nếu không có thì dùng giá trị mặc định
+    const [collapsed, setCollapsed] = useState(() => {
+        const saved = localStorage.getItem('sidebarCollapsed');
+        if (saved !== null) {
+            return saved === 'true';
+        }
+        return defaultCollapsed;
+    });
 
-  useEffect(() => {
-    // Lưu vào localStorage mỗi khi collapsed thay đổi
-    localStorage.setItem("sidebarCollapsed", collapsed.toString());
-  }, [collapsed]);
+    // Lưu vào localStorage mỗi khi trạng thái thay đổi
+    useEffect(() => {
+        localStorage.setItem('sidebarCollapsed', collapsed.toString());
+    }, [collapsed]);
 
-  return [collapsed, setCollapsed];
+    return [collapsed, setCollapsed];
 };
 
 export default useSidebarCollapse;
