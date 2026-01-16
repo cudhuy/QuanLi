@@ -1,565 +1,801 @@
-import React, { useState } from 'react';
-import AppHeader from '../../../components/AppHeader';
-import AppSidebar from '../../../components/AppSidebar';
-import useSidebarCollapse from '../../../hooks/useSidebarCollapse';
+﻿import React, { useState, useEffect, useCallback } from 'react'
+import AppHeader from '../../../components/AppHeader'
+import AppSidebar from '../../../components/AppSidebar'
+import useSidebarCollapse from '../../../hooks/useSidebarCollapse'
+import { useAuth } from '../../../contexts/AuthContext'
 import {
-	Layout,
-	Button,
-	Space,
-	Input,
-	Select,
-	DatePicker,
-	Table,
-	Tag,
-	Pagination,
-	Drawer,
-	Form,
-	message,
-} from 'antd';
-import { PlusOutlined, DownloadOutlined } from '@ant-design/icons';
-import * as XLSX from 'xlsx';
-import { useNavigate } from 'react-router-dom'; // Thêm vào đầu file nếu chưa có
+  Layout,
+  Button,
+  Input,
+  Table,
+  Modal,
+  Form,
+  Popconfirm,
+  Pagination,
+  ConfigProvider,
+  Tag,
+  Card,
+  Row,
+  Col,
+  App,
+  Typography
+} from 'antd'
+import vi_VN from 'antd/lib/locale/vi_VN'
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  MailOutlined,
+  TrophyOutlined,
+  ShoppingCartOutlined,
+  DollarOutlined,
+  EyeOutlined,
+  CalendarOutlined,
+  TableOutlined
+} from '@ant-design/icons'
+import { Users, Award, TrendingUp, UserCheck } from 'react-feather'
+import axios from 'axios'
+import dayjs from 'dayjs'
+import { authService } from '../../../services/authService'
 
-const { Content } = Layout;
-const { RangePicker } = DatePicker;
-const { Option } = Select;
+const { Content } = Layout
+const { Title, Text } = Typography
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL
 
-const CustomerPage = () => {
-	const [collapsed, setCollapsed] = useSidebarCollapse();
-	const [pageTitle] = useState('Khách hàng');
-	const [currentPage, setCurrentPage] = useState(1);
-	const [pageSize, setPageSize] = useState(8);
-	const [loading] = useState(false);
-	const [addDrawerOpen, setAddDrawerOpen] = useState(false);
-	const [addForm] = Form.useForm();
-	const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-	const [selectedCustomer, setSelectedCustomer] = useState(null);
-	const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-	const [editForm] = Form.useForm();
-	const [editingCustomer, setEditingCustomer] = useState(null);
-	const [searchText, setSearchText] = useState('');
-	const [statusFilter, setStatusFilter] = useState('all');
+const CustomersPage = () => {
+  const { message } = App.useApp()
+  const [collapsed, setCollapsed] = useSidebarCollapse()
+  const [pageTitle] = useState('Quản lý khách hàng')
+  const { canAccess } = useAuth()
+  const [allCustomers, setAllCustomers] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
-	const navigate = useNavigate(); // Thêm trong component CustomerPage
+  const [modalOpen, setModalOpen] = useState(false)
+  const [addForm] = Form.useForm()
 
-	// Dữ liệu mẫu, bổ sung lịch sử đơn hàng cho mỗi khách
-	const dataSource = [
-		{
-			key: '1',
-			phone: '0912345678', // <-- Hiển thị full số
-			point: 156,
-			orders: 12,
-			total: '2,450,000đ',
-			lastVisit: '28/08/2025 14:30',
-			status: 'Khách cũ',
-			orderHistory: [
-				{
-					code: '#DH001',
-					date: '25/08/2025',
-					amount: '350,000đ',
-					status: 'Hoàn tất',
-				},
-				{
-					code: '#DH002',
-					date: '20/08/2025',
-					amount: '420,000đ',
-					status: 'Hoàn tất',
-				},
-			],
-		},
-		{
-			key: '2',
-			phone: '08xx xxx 146',
-			point: 0,
-			orders: 1,
-			total: '320,000đ',
-			lastVisit: '27/08/2025 19:15',
-			status: 'Khách mới',
-			orderHistory: [
-				{
-					code: '#DH003',
-					date: '27/08/2025',
-					amount: '320,000đ',
-					status: 'Hoàn tất',
-				},
-			],
-		},
-		{
-			key: '3',
-			phone: '08xx xxx 456',
-			point: 89,
-			orders: 8,
-			total: '1,780,000đ',
-			lastVisit: '25/08/2025 12:45',
-			status: 'Khách cũ',
-			orderHistory: [],
-		},
-	];
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editForm] = Form.useForm()
+  const [editingCustomer, setEditingCustomer] = useState(null)
 
-	// Cột bảng
-	const columns = [
-		{ title: 'SDT', dataIndex: 'phone', key: 'phone' },
-		{
-			title: 'Điểm tích lũy',
-			dataIndex: 'point',
-			key: 'point',
-			render: (point) =>
-				point > 0 ? (
-					<span style={{ color: '#226533', fontWeight: 500 }}>
-						{point} điểm
-					</span>
-				) : (
-					<span style={{ color: '#999' }}>0 điểm</span>
-				),
-		},
-		{ title: 'Số đơn hàng', dataIndex: 'orders', key: 'orders' },
-		{
-			title: 'Tổng chi tiêu',
-			dataIndex: 'total',
-			key: 'total',
-			render: (total) => (
-				<span style={{ color: 'orange', fontWeight: 500 }}>{total}</span>
-			),
-		},
-		{ title: 'Lần cuối ghé', dataIndex: 'lastVisit', key: 'lastVisit' },
-		{
-			title: 'Trạng thái',
-			dataIndex: 'status',
-			key: 'status',
-			render: (status) => (
-				<Tag color={status === 'Khách cũ' ? 'green' : 'blue'}>{status}</Tag>
-			),
-		},
-		{
-			title: 'Thao tác',
-			key: 'action',
-			render: (_, record) => (
-				<Space>
-					<Button
-						size='small'
-						onClick={() => {
-							setSelectedCustomer(record);
-							setDetailDrawerOpen(true);
-						}}
-					>
-						Xem chi tiết
-					</Button>
-					<Button
-						size='small'
-						type='dashed'
-						onClick={() => {
-							setEditingCustomer(record);
-							editForm.setFieldsValue({ phone: record.phone });
-							setEditDrawerOpen(true);
-						}}
-					>
-						Chỉnh sửa
-					</Button>
-				</Space>
-			),
-		},
-	];
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
-	// Lọc dữ liệu theo searchText và statusFilter
-	const filteredData = dataSource.filter((item) => {
-		// Lọc theo SDT
-		const searchMatch =
-			!searchText ||
-			(item.phone || '')
-				.toLowerCase()
-				.includes(searchText.trim().toLowerCase());
-		// Lọc theo trạng thái
-		let statusMatch = true;
-		if (statusFilter === 'old') statusMatch = item.status === 'Khách cũ';
-		else if (statusFilter === 'new') statusMatch = item.status === 'Khách mới';
-		return searchMatch && statusMatch;
-	});
+  // Fetch customers
+  const fetchCustomers = useCallback(async () => {
+    try {
+      setLoading(true)
+      const token = authService.getToken()
+      console.log('TOKEN: ', token)
+      const response = await axios.get(`${REACT_APP_API_URL}/customers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      console.log('API Response:', response.data)
+      if (response.data.status === 200) {
+        const customers = Array.isArray(response.data.data?.customers)
+          ? response.data.data.customers
+          : []
+        console.log('Customers data:', customers)
+        setAllCustomers(customers)
+        setCustomers(customers)
+      }
+    } catch (error) {
+      console.error('Failed to fetch customers:', error)
+      message.error({
+        content: 'Không thể tải danh sách khách hàng',
+        duration: 3,
+      })
+      setAllCustomers([])
+      setCustomers([])
+    } finally {
+      setLoading(false)
+    }
+  }, [message])
 
-	// Phân trang dữ liệu đã lọc
-	const pagedData = filteredData.slice(
-		(currentPage - 1) * pageSize,
-		currentPage * pageSize,
-	);
+  // Add customer
+  const handleAddCustomer = async (values) => {
+    try {
+      const token = authService.getToken()
+      const response = await axios.post(`${REACT_APP_API_URL}/customers`, {
+        phone: values.phone,
+        name: values.name || null,
+        email: values.email || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.data.status === 200 || response.data.status === 201) {
+        message.success({
+          content: 'Đã thêm khách hàng thành công',
+          duration: 3,
+        })
+        setModalOpen(false)
+        addForm.resetFields()
+        fetchCustomers()
+      }
+    } catch (error) {
+      if (error?.errorFields) return
+      const errorMsg = error.response?.data?.message || 'Thêm khách hàng thất bại'
+      message.error({
+        content: errorMsg,
+        duration: 3,
+      })
+    }
+  }
 
-	// Hàm xử lý submit thêm khách hàng
-	const handleAddCustomer = async () => {
-		try {
-			const values = await addForm.validateFields();
-			// Kiểm tra trùng số điện thoại
-			const existed = dataSource.some((item) => item.phone === values.phone);
-			if (existed) {
-				message.error('Số điện thoại này đã tồn tại trong danh sách!');
-				return;
-			}
-			// Xử lý thêm khách hàng ở đây (gọi API hoặc cập nhật state)
-			setAddDrawerOpen(false);
-			addForm.resetFields();
-			message.success('Đăng ký khách hàng thành công!');
-		} catch (err) {
-			// Nếu validate lỗi thì không làm gì
-		}
-	};
+  // Edit customer
+  const openEditModal = (customer) => {
+    setEditingCustomer(customer)
+    editForm.setFieldsValue({
+      phone: customer.phone,
+      name: customer.name || '',
+      email: customer.email || ''
+    })
+    setEditModalOpen(true)
+  }
 
-	// Hàm xuất danh sách khách hàng ra file Excel
-	const handleExportExcel = () => {
-		// Chuyển dữ liệu hiện tại thành sheet
-		const exportData = dataSource.map((item) => ({
-			'Số điện thoại': item.phone,
-			'Điểm tích lũy': item.point,
-			'Số đơn hàng': item.orders,
-			'Tổng chi tiêu': item.total,
-			'Lần cuối ghé': item.lastVisit,
-			'Trạng thái': item.status,
-		}));
-		const ws = XLSX.utils.json_to_sheet(exportData);
-		const wb = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(wb, ws, 'KhachHang');
-		XLSX.writeFile(wb, 'danh_sach_khach_hang.xlsx');
-	};
+  const handleEditCustomer = async () => {
+    try {
+      const values = await editForm.validateFields()
+      const token = authService.getToken()
+      const response = await axios.put(`${REACT_APP_API_URL}/customers/${editingCustomer.id}`, {
+        phone: values.phone,
+        name: values.name || null,
+        email: values.email || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.data.status === 200) {
+        message.success({
+          content: 'Đã sửa thông tin khách hàng thành công',
+          duration: 3,
+        })
+        setEditModalOpen(false)
+        editForm.resetFields()
+        setEditingCustomer(null)
+        fetchCustomers()
+      }
+    } catch (error) {
+      if (error?.errorFields) return
+      const errorMsg = error.response?.data?.message || 'Cập nhật khách hàng thất bại'
+      message.error({
+        content: errorMsg,
+        duration: 3,
+      })
+    }
+  }
 
-	return (
-		<Layout style={{ minHeight: '100vh' }}>
-			{/* Sidebar dùng chung */}
-			<AppSidebar collapsed={collapsed} currentPageKey='customers' />
+  // Delete customer
+  const handleDeleteCustomer = async (id) => {
+    try {
+      const token = authService.getToken()
+      const response = await axios.delete(`${REACT_APP_API_URL}/customers/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.data.status === 200) {
+        message.success({
+          content: 'Đã xóa khách hàng thành công',
+          duration: 3,
+        })
+        setAllCustomers(prev => prev.filter(item => item.id !== id))
+        setCustomers(prev => prev.filter(item => item.id !== id))
+      }
+    } catch (error) {
+      console.error('Failed to delete customer:', error)
+      message.error({
+        content: 'Xóa khách hàng thất bại',
+        duration: 3,
+      })
+    }
+  }
 
-			<Layout style={{ marginLeft: collapsed ? 80 : 220 }}>
-				{/* Header dùng chung */}
-				<AppHeader
-					collapsed={collapsed}
-					setCollapsed={setCollapsed}
-					pageTitle={pageTitle}
-				/>
+  // View detail
+  const handleViewDetail = async (customer) => {
+    try {
+      setSelectedCustomer(customer)
+      setDetailModalOpen(true)
+      setLoadingDetail(true)
+      const token = authService.getToken()
+      const response = await axios.get(`${REACT_APP_API_URL}/customers/${customer.id}/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.data.status === 200) {
+        setSelectedCustomer({
+          ...customer,
+          sessions: response.data.data.sessions || [],
+          totalSessions: response.data.data.totalSessions || 0,
+          totalOrders: response.data.data.totalOrders || 0
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch customer history:', error)
+      message.error({
+        content: 'Không thể tải lịch sử đơn hàng',
+        duration: 3,
+      })
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
 
-				{/* Content */}
-				<Content
-					style={{
-						marginTop: 64,
-						background: '#f9f9f9',
-						minHeight: 'calc(100vh - 64px)',
-						height: 'calc(100vh - 64px)',
-						overflow: 'hidden',
-						display: 'flex',
-						flexDirection: 'column',
-					}}
-				>
-					{/* Bộ lọc khách hàng - Fixed */}
-					<div
-						style={{
-							backgroundColor: '#fff',
-							padding: '16px 20px',
-							borderBottom: '1px solid #e8e8e8',
-							flexShrink: 0,
-						}}
-					>
-						<div
-							style={{
-								display: 'flex',
-								gap: 12,
-								flexWrap: 'wrap',
-								alignItems: 'center',
-								justifyContent: 'space-between',
-							}}
-						>
-							<div
-								style={{
-									display: 'flex',
-									gap: 12,
-									flexWrap: 'wrap',
-									alignItems: 'center',
-								}}
-							>
-								<Input.Search
-									placeholder='Tìm kiếm theo SDT'
-									style={{ width: 250 }}
-									value={searchText}
-									onChange={(e) => {
-										setSearchText(e.target.value);
-										setCurrentPage(1);
-									}}
-									allowClear
-								/>
-								<Select
-									value={statusFilter}
-									style={{ width: 150 }}
-									onChange={(val) => {
-										setStatusFilter(val);
-										setCurrentPage(1);
-									}}
-								>
-									<Option value='all'>Tất cả</Option>
-									<Option value='old'>Khách cũ</Option>
-									<Option value='new'>Khách mới</Option>
-								</Select>
-							</div>
-							<Space>
-								<Button
-									type='primary'
-									icon={<PlusOutlined />}
-									style={{ background: '#226533' }}
-									onClick={() => setAddDrawerOpen(true)}
-								>
-									Đăng ký
-								</Button>
-								<Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
-									Xuất danh sách
-								</Button>
-							</Space>
-						</div>
-					</div>
+  // Effects
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
 
-					{/* Bảng khách hàng - Scrollable Area */}
-					<div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
-						<Table
-							rowKey='key'
-							loading={loading}
-							columns={columns}
-							dataSource={pagedData}
-							pagination={false}
-							bordered
-							locale={{
-								triggerDesc: 'Nhấn để sắp xếp giảm dần',
-								triggerAsc: 'Nhấn để sắp xếp tăng dần',
-								cancelSort: 'Nhấn để hủy sắp xếp',
-							}}
-							style={{ background: '#fff', marginBottom: 16 }}
-						/>
+  // Filter
+  useEffect(() => {
+    const search = searchText.trim().toLowerCase()
+    if (!search) {
+      setCustomers(allCustomers)
+      return
+    }
+    const filtered = allCustomers.filter((c) =>
+      (c.phone || '').toLowerCase().includes(search) ||
+      (c.name || '').toLowerCase().includes(search) ||
+      (c.email || '').toLowerCase().includes(search)
+    )
+    setCustomers(filtered)
+  }, [searchText, allCustomers])
 
-						{/* Pagination */}
-						<div
-							style={{
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'center',
-							}}
-						>
-							<span>
-								Hiển thị{' '}
-								{filteredData.length === 0
-									? 0
-									: (currentPage - 1) * pageSize + 1}{' '}
-								đến {Math.min(currentPage * pageSize, filteredData.length)}{' '}
-								trong tổng số {filteredData.length} khách hàng
-							</span>
-							<Pagination
-								current={currentPage}
-								pageSize={pageSize}
-								total={filteredData.length}
-								showSizeChanger
-								pageSizeOptions={['5', '8', '10', '20', '50']}
-								showQuickJumper
-								onChange={(page, size) => {
-									setCurrentPage(page);
-									setPageSize(size);
-								}}
-							/>
-						</div>
-					</div>
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchText])
 
-					{/* Drawer thêm khách hàng */}
-					<Drawer
-						title='Đăng ký khách hàng mới'
-						placement='right'
-						width={600}
-						open={addDrawerOpen}
-						onClose={() => {
-							setAddDrawerOpen(false);
-							addForm.resetFields();
-						}}
-						footer={
-							<div style={{ textAlign: 'right' }}>
-								<Button
-									onClick={() => {
-										setAddDrawerOpen(false);
-										addForm.resetFields();
-									}}
-									style={{ marginRight: 8 }}
-								>
-									Hủy
-								</Button>
-								<Button type='primary' onClick={handleAddCustomer}>
-									Thêm
-								</Button>
-							</div>
-						}
-					>
-						<Form form={addForm} layout='vertical' initialValues={{}}>
-							<Form.Item
-								label='Số điện thoại'
-								name='phone'
-								rules={[
-									{ required: true, message: 'Nhập số điện thoại!' },
-									{
-										pattern: /^0\d{9,10}$/,
-										message: 'Số điện thoại không hợp lệ!',
-									},
-								]}
-							>
-								<Input
-									placeholder='Nhập số điện thoại khách hàng'
-									maxLength={11}
-								/>
-							</Form.Item>
-						</Form>
-					</Drawer>
+  // Statistics
+  const statistics = {
+    totalCustomers: Array.isArray(allCustomers) ? allCustomers.length : 0,
+    totalPoints: Array.isArray(allCustomers) ? allCustomers.reduce((sum, c) => sum + (c.points || 0), 0) : 0,
+    avgPoints: Array.isArray(allCustomers) && allCustomers.length > 0
+      ? Math.round(allCustomers.reduce((sum, c) => sum + (c.points || 0), 0) / allCustomers.length)
+      : 0,
+    activeCustomers: Array.isArray(allCustomers) ? allCustomers.filter(c => (c.points || 0) > 0).length : 0
+  }
 
-					{/* Drawer xem chi tiết khách hàng */}
-					<Drawer
-						title='Chi tiết khách hàng'
-						placement='right'
-						width={800}
-						open={detailDrawerOpen}
-						onClose={() => {
-							setDetailDrawerOpen(false);
-							setSelectedCustomer(null);
-						}}
-						footer={
-							<div style={{ textAlign: 'right' }}>
-								<Button
-									onClick={() => {
-										setDetailDrawerOpen(false);
-										setSelectedCustomer(null);
-									}}
-								>
-									Đóng
-								</Button>
-							</div>
-						}
-					>
-						{selectedCustomer ? (
-							<div style={{ lineHeight: 2 }}>
-								<b>Số điện thoại:</b> {selectedCustomer.phone} <br />
-								<b>Điểm tích lũy:</b> {selectedCustomer.point} <br />
-								<b>Số đơn hàng:</b> {selectedCustomer.orders} <br />
-								<b>Tổng chi tiêu:</b> {selectedCustomer.total} <br />
-								<b>Lần cuối ghé:</b> {selectedCustomer.lastVisit} <br />
-								<b>Trạng thái:</b>{' '}
-								<Tag
-									color={
-										selectedCustomer.status === 'Khách cũ' ? 'green' : 'blue'
-									}
-								>
-									{selectedCustomer.status}
-								</Tag>
-								<div style={{ marginTop: 24 }}>
-									<b>Lịch sử đặt hàng:</b>
-									<Table
-										style={{ marginTop: 8 }}
-										size='small'
-										bordered
-										columns={[
-											{ title: 'Mã đơn', dataIndex: 'code', key: 'code' },
-											{ title: 'Ngày đặt', dataIndex: 'date', key: 'date' },
-											{ title: 'Số tiền', dataIndex: 'amount', key: 'amount' },
-											{
-												title: 'Trạng thái',
-												dataIndex: 'status',
-												key: 'status',
-												render: (status) =>
-													status === 'Hoàn tất' ? (
-														<Tag color='green'>Hoàn tất</Tag>
-													) : (
-														<Tag color='red'>{status}</Tag>
-													),
-											},
-											{
-												title: 'Chi tiết',
-												key: 'detail',
-												render: (_, record) => (
-													<Button
-														size='small'
-														type='link'
-														onClick={() =>
-															navigate(`/main/orders/${record.code}`)
-														}
-													>
-														Xem chi tiết
-													</Button>
-												),
-											},
-										]}
-										dataSource={selectedCustomer.orderHistory || []}
-										rowKey='code'
-										pagination={false}
-										locale={{ emptyText: 'Chưa có đơn hàng nào' }}
-									/>
-								</div>
-							</div>
-						) : (
-							<span>Không có dữ liệu</span>
-						)}
-					</Drawer>
+  // Table columns
+  const columns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      align: 'center',
+      width: '8%'
+    },
+    {
+      title: 'Số điện thoại',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: '20%',
+      align: 'center',
+      render: (phone) => (
+        <div className="flex justify-center gap-2">
+          <span className="font-medium">{phone}</span>
+        </div>
+      )
+    },
+    {
+      title: 'Tên',
+      dataIndex: 'name',
+      key: 'name',
+      width: '25%',
+      align: 'center',
+      render: (name) => <span className="mx-8 text-gray-800 float-start">{name || '—'}</span>
+    },
+    {
+      title: 'Điểm',
+      dataIndex: 'points',
+      key: 'points',
+      align: 'center',
+      width: '12%',
+      sorter: (a, b) => (a.points || 0) - (b.points || 0),
+      render: (points) => (
+        <Tag color="orange" className="font-semibold">
+          {points || 0}
+        </Tag>
+      )
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: '15%',
+      align: 'center',
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '—'
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'center',
+      width: '20%',
+      fixed: 'right',
+      render: (_, record) => (
+        <div className="flex gap-2 justify-center">
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openEditModal(record)}
+          />
+          {canAccess(['OWNER', 'MANAGER']) && (
+            <Popconfirm
+              title="Xác nhận xóa?"
+              onConfirm={() => handleDeleteCustomer(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </div>
+      )
+    }
+  ]
 
-					{/* Drawer chỉnh sửa khách hàng */}
-					<Drawer
-						title='Chỉnh sửa khách hàng'
-						placement='right'
-						width={400}
-						open={editDrawerOpen}
-						onClose={() => {
-							setEditDrawerOpen(false);
-							setEditingCustomer(null);
-							editForm.resetFields();
-						}}
-						footer={
-							<div style={{ textAlign: 'right' }}>
-								<Button
-									onClick={() => {
-										setEditDrawerOpen(false);
-										setEditingCustomer(null);
-										editForm.resetFields();
-									}}
-									style={{ marginRight: 8 }}
-								>
-									Hủy
-								</Button>
-								<Button
-									type='primary'
-									onClick={async () => {
-										try {
-											const values = await editForm.validateFields();
-											// Xử lý cập nhật SĐT ở đây (nếu dùng API thì gọi API, nếu dùng data mẫu thì cập nhật state)
-											// Ví dụ với data mẫu:
-											// Tìm vị trí khách hàng trong dataSource và cập nhật SĐT
-											if (editingCustomer) {
-												editingCustomer.phone = values.phone;
-												message.success('Cập nhật khách hàng thành công!');
-											}
-											setEditDrawerOpen(false);
-											setEditingCustomer(null);
-											editForm.resetFields();
-										} catch (err) {
-											// Nếu validate lỗi thì không làm gì
-										}
-									}}
-								>
-									Lưu
-								</Button>
-							</div>
-						}
-					>
-						<Form form={editForm} layout='vertical' initialValues={{}}>
-							<Form.Item
-								label='Số điện thoại'
-								name='phone'
-								rules={[
-									{ required: true, message: 'Nhập số điện thoại!' },
-									{
-										pattern: /^0\d{9,10}$/,
-										message: 'Số điện thoại không hợp lệ!',
-									},
-								]}
-							>
-								<Input
-									placeholder='Nhập số điện thoại khách hàng'
-									maxLength={11}
-								/>
-							</Form.Item>
-						</Form>
-					</Drawer>
-				</Content>
-			</Layout>
-		</Layout>
-	);
-};
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <AppSidebar collapsed={collapsed} currentPageKey="customers" />
+      <Layout style={{ marginLeft: collapsed ? 80 : 220 }}>
+        <AppHeader collapsed={collapsed} setCollapsed={setCollapsed} pageTitle={pageTitle} />
+        <Content style={{ marginTop: 64, padding: 20, background: '#f0f2f5' }}>
+          {/* Statistics - Japanese Minimalist Design */}
+          <Row gutter={[20, 20]} className="mb-6">
+            <Col xs={24} sm={12} lg={6}>
+              <Card
+                bordered={false}
+                className="rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 h-35 overflow-hidden"
+                bodyStyle={{
+                  padding: '24px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                hoverable
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center flex-shrink-0">
+                    <Users size={22} strokeWidth={2} color="#1890ff" />
+                  </div>
+                  <Text className="text-gray-500 text-lg font-medium tracking-wide mt-1">
+                    Tổng khách hàng
+                  </Text>
+                </div>
+                <div>
+                  <Title
+                    level={3}
+                    className="text-gray-800 text-2xl font-semibold leading-none tracking-tight float-end"
+                    style={{ margin: '12px 0 4px 0' }}
+                  >
+                    {statistics.totalCustomers}
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card
+                bordered={false}
+                className="rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 h-35 overflow-hidden"
+                bodyStyle={{
+                  padding: '24px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                hoverable
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center flex-shrink-0">
+                    <Award size={22} strokeWidth={2} color="#faad14" />
+                  </div>
+                  <Text className="text-gray-500 text-lg font-medium tracking-wide mt-1">
+                    Tổng điểm
+                  </Text>
+                </div>
+                <div>
+                  <Title
+                    level={3}
+                    className="text-gray-800 text-2xl font-semibold leading-none tracking-tight float-end"
+                    style={{ margin: '12px 0 4px 0' }}
+                  >
+                    {statistics.totalPoints?.toLocaleString('vi-VN')}
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card
+                bordered={false}
+                className="rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 h-35 overflow-hidden"
+                bodyStyle={{
+                  padding: '24px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                hoverable
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp size={22} strokeWidth={2} color="#52c41a" />
+                  </div>
+                  <Text className="text-gray-500 text-lg font-medium tracking-wide mt-1">
+                    TB/khách
+                  </Text>
+                </div>
+                <div>
+                  <Title
+                    level={3}
+                    className="text-gray-800 text-2xl font-semibold leading-none tracking-tight float-end"
+                    style={{ margin: '12px 0 4px 0' }}
+                  >
+                    {statistics.avgPoints}
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card
+                bordered={false}
+                className="rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 h-35 overflow-hidden"
+                bodyStyle={{
+                  padding: '24px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                hoverable
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <UserCheck size={22} strokeWidth={2} color="#226533" />
+                  </div>
+                  <Text className="text-gray-500 text-lg font-medium tracking-wide mt-1">
+                    KH có điểm
+                  </Text>
+                </div>
+                <div>
+                  <Title
+                    level={3}
+                    className="text-gray-800 text-2xl font-semibold leading-none tracking-tight float-end"
+                    style={{ margin: '12px 0 4px 0' }}
+                  >
+                    {statistics.activeCustomers}
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+          </Row>
 
-export default CustomerPage;
+          {/* Filter & Actions */}
+          <div className="mb-4 flex justify-between items-center gap-3 flex-wrap">
+            <Input
+              placeholder="Tìm kiếm SĐT, tên"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              className="max-w-md"
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setModalOpen(true)}
+              style={{ background: '#226533' }}
+            >
+              Thêm khách hàng
+            </Button>
+          </div>
+
+          {/* Table */}
+          <ConfigProvider locale={vi_VN}>
+            <div className="bg-white rounded-lg shadow">
+              <Table
+                rowKey="id"
+                loading={loading}
+                columns={columns}
+                dataSource={customers.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+                pagination={false}
+                scroll={{ y: 500 }}
+              />
+              {customers.length > 0 && (
+                <div className="p-4 border-t flex justify-end">
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={customers.length}
+                    onChange={setCurrentPage}
+                    onShowSizeChange={(_, size) => {
+                      setCurrentPage(1)
+                      setPageSize(size)
+                    }}
+                    showSizeChanger
+                    pageSizeOptions={['10', '20', '50']}
+                  />
+                </div>
+              )}
+            </div>
+          </ConfigProvider>
+
+          {/* Add Modal */}
+          <Modal
+            title="Thêm khách hàng"
+            open={modalOpen}
+            onOk={() => addForm.submit()}
+            onCancel={() => {
+              setModalOpen(false)
+              addForm.resetFields()
+            }}
+            okText="Thêm"
+            cancelText="Hủy"
+          >
+            <Form form={addForm} layout="vertical" onFinish={handleAddCustomer}>
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập SĐT!' },
+                  { pattern: /^0\d{9,10}$/, message: 'SĐT không hợp lệ!' }
+                ]}
+              >
+                <Input prefix={<PhoneOutlined />} placeholder="Nhập số điện thoại" />
+              </Form.Item>
+              <Form.Item label="Tên khách hàng" name="name">
+                <Input prefix={<UserOutlined />} placeholder="Nhập tên (tùy chọn)" />
+              </Form.Item>
+              {/* <Form.Item
+                label="Email"
+                name="email"
+                rules={[{ type: 'email', message: 'Email không hợp lệ!' }]}
+              >
+                <Input prefix={<MailOutlined />} placeholder="Nhập email (tùy chọn)" />
+              </Form.Item> */}
+            </Form>
+          </Modal>
+
+          {/* Edit Modal */}
+          <Modal
+            title="Chỉnh sửa khách hàng"
+            open={editModalOpen}
+            onOk={handleEditCustomer}
+            onCancel={() => {
+              setEditModalOpen(false)
+              editForm.resetFields()
+              setEditingCustomer(null)
+            }}
+            okText="Cập nhật"
+            cancelText="Hủy"
+          >
+            <Form form={editForm} layout="vertical">
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập SĐT!' },
+                  { pattern: /^0\d{9,10}$/, message: 'SĐT không hợp lệ!' }
+                ]}
+              >
+                <Input prefix={<PhoneOutlined />} />
+              </Form.Item>
+              <Form.Item label="Tên khách hàng" name="name">
+                <Input prefix={<UserOutlined />} />
+              </Form.Item>
+              {/* <Form.Item
+                label="Email"
+                name="email"
+                rules={[{ type: 'email', message: 'Email không hợp lệ!' }]}
+              >
+                <Input prefix={<MailOutlined />} />
+              </Form.Item> */}
+              {editingCustomer && (
+                <div className="bg-gray-50 p-3 rounded">
+                  <div className="text-sm">
+                    Điểm tích lũy: <strong>{editingCustomer.points || 0}</strong>
+                  </div>
+                </div>
+              )}
+            </Form>
+          </Modal>
+
+          {/* Detail Modal */}
+          <Modal
+            title={
+              <div className='flex flex-col'>
+                <span>Chi tiết khách hàng</span>
+                <span className='text-sm text-gray-500 mb-2'>{selectedCustomer?.name}</span>
+              </div>
+            }
+            open={detailModalOpen}
+            onCancel={() => {
+              setDetailModalOpen(false)
+              setSelectedCustomer(null)
+            }}
+            footer={null}
+            width={900}
+          >
+            {selectedCustomer ? (
+              <div>
+                <Card className="mb-4">
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <div className="text-gray-500">Số điện thoại</div>
+                      <div className="font-semibold">{selectedCustomer.phone}</div>
+                    </Col>
+
+                    <Col span={12}>
+                      <div className="text-gray-500">Điểm tích lũy</div>
+                      <div className="font-bold text-orange-600">{selectedCustomer.points || 0}</div>
+                    </Col>
+                  </Row>
+                  {selectedCustomer.totalSessions > 0 && (
+                    <Row gutter={[16, 16]} className="mt-4 pt-4 border-t">
+                      <Col span={12}>
+                        <div className="text-gray-500">Tổng số phiên</div>
+                        <div className="font-semibold text-blue-600">{selectedCustomer.totalSessions}</div>
+                      </Col>
+                      <Col span={12}>
+                        <div className="text-gray-500">Tổng số đơn</div>
+                        <div className="font-semibold text-green-600">{selectedCustomer.totalOrders}</div>
+                      </Col>
+                    </Row>
+                  )}
+                </Card>
+
+                <h3 className="font-semibold mb-3">Lịch sử theo phiên</h3>
+                {loadingDetail ? (
+                  <div className="text-center py-8">Đang tải...</div>
+                ) : selectedCustomer.sessions && selectedCustomer.sessions.length > 0 ? (
+                  <Table
+                    size="small"
+                    bordered
+                    dataSource={selectedCustomer.sessions}
+                    rowKey="session_id"
+                    pagination={{ pageSize: 5 }}
+                    expandable={{
+                      expandedRowRender: (record) => (
+                        <Table
+                          size="small"
+                          dataSource={record.orders}
+                          rowKey="id"
+                          pagination={false}
+                          columns={[
+                            {
+                              title: 'Mã đơn',
+                              dataIndex: 'id',
+                              key: 'id',
+                              align: 'center',
+                              width: 80,
+                              render: (id) => <span className="text-blue-600">#{id}</span>
+                            },
+                            {
+                              title: 'Tổng tiền',
+                              dataIndex: 'total_price',
+                              key: 'total_price',
+                              align: 'center',
+                              width: 160,
+                              render: (price) => (<span className='float-right mr-2'>{`${parseFloat(price || 0).toLocaleString('vi-VN')}đ`}</span>)
+                            },
+                            {
+                              title: 'Trạng thái',
+                              dataIndex: 'status',
+                              key: 'status',
+                              align: 'center',
+                              render: (status) => {
+                                const map = {
+                                  NEW: { text: 'Mới', color: 'orange' },
+                                  IN_PROGRESS: { text: 'Đang xử lý', color: 'blue' },
+                                  DONE: { text: 'Hoàn tất', color: 'green' },
+                                  PAID: { text: 'Đã thanh toán', color: 'purple' },
+                                  CANCELLED: { text: 'Đã hủy', color: 'red' }
+                                }
+                                const config = map[status] || { text: status, color: 'default' }
+                                return <Tag color={config.color}>{config.text}</Tag>
+                              }
+                            },
+                            {
+                              title: 'Thời gian',
+                              dataIndex: 'created_at',
+                              key: 'created_at',
+                              align: 'center',
+                              render: (date) => dayjs(date).format('HH:mm:ss')
+                            }
+                          ]}
+                        />
+                      ),
+                      rowExpandable: (record) => record.orders && record.orders.length > 0
+                    }}
+                    columns={[
+                      {
+                        title: 'Phiên',
+                        dataIndex: 'session_id',
+                        key: 'session_id',
+                        width: 80,
+                        align: 'center',
+                        render: (id) => <span className="font-medium">#{id}</span>
+                      },
+                      {
+                        title: 'Bàn',
+                        dataIndex: 'table_number',
+                        key: 'table_number',
+                        align: 'center',
+                        width: 80,
+                        render: (num) => num ? (
+                          <Tag icon={<TableOutlined />} color="blue">Bàn {num}</Tag>
+                        ) : '—'
+                      },
+                      {
+                        title: 'Số đơn',
+                        dataIndex: 'order_count',
+                        key: 'order_count',
+                        width: 80,
+                        align: 'center',
+                        render: (count) => <Tag color="cyan">{count} đơn</Tag>
+                      },
+                      {
+                        title: 'Tổng tiền',
+                        dataIndex: 'total_amount',
+                        key: 'total_amount',
+                        align: 'center',
+                        render: (amount) => (
+                          <span className="font-semibold text-green-600 float-right">
+                            {parseFloat(amount || 0).toLocaleString('vi-VN')}đ
+                          </span>
+                        )
+                      },
+                      {
+                        title: 'Trạng thái phiên',
+                        dataIndex: 'session_status',
+                        key: 'session_status',
+                        align: 'center',
+                        render: (status) => {
+                          const map = {
+                            ACTIVE: { text: 'Đang hoạt động', color: 'processing' },
+                            COMPLETED: { text: 'Hoàn thành', color: 'success' },
+                            CANCELLED: { text: 'Đã hủy', color: 'error' }
+                          }
+                          const config = map[status] || { text: status, color: 'default' }
+                          return <Tag color={config.color}>{config.text}</Tag>
+                        }
+                      },
+                      {
+                        title: 'Ngày',
+                        dataIndex: 'session_created_at',
+                        key: 'session_created_at',
+                        align: 'center',
+                        render: (date) => (
+                          <span>
+                            <CalendarOutlined className="mr-1" />
+                            {dayjs(date).format('DD/MM/YYYY')}
+                          </span>
+                        )
+                      }
+                    ]}
+                  />
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded">Chưa có lịch sử phiên nào</div>
+                )}
+              </div>
+            ) : null}
+          </Modal>
+        </Content>
+      </Layout>
+    </Layout>
+  )
+}
+
+export default CustomersPage
